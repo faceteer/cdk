@@ -3,13 +3,13 @@ import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambdaNodeJs from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
-import { ApiHandlerDefinition } from '../handlers/api-handler';
+import type { HandlerNameAndPath } from '../extract/extract-handlers';
+import type { ApiHandlerDefinition } from '../handlers/api-handler';
 
 export interface ServiceApiFunctionProps {
 	role: iam.IRole;
 	httpApi: apigwv2.CfnApi;
-	handlerFile: string;
-	definition: ApiHandlerDefinition;
+	definition: ApiHandlerDefinition & HandlerNameAndPath;
 	authorizerId?: string;
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
 }
@@ -24,7 +24,6 @@ export class ServiceApiFunction extends Construct {
 		{
 			role,
 			httpApi,
-			handlerFile,
 			definition,
 			authorizerId,
 			bundlingOptions = {},
@@ -38,7 +37,7 @@ export class ServiceApiFunction extends Construct {
 
 		this.fn = new lambdaNodeJs.NodejsFunction(this, 'Function', {
 			awsSdkConnectionReuse: true,
-			entry: handlerFile,
+			entry: definition.path,
 			description: definition.description,
 			memorySize: definition.memorySize ?? 192,
 			reservedConcurrentExecutions: definition.reservedConcurrentExecutions,
@@ -53,7 +52,7 @@ export class ServiceApiFunction extends Construct {
 			},
 			environment: {
 				NODE_OPTIONS: '--enable-source-maps',
-				HANDLER_NAME: id,
+				HANDLER_NAME: definition.name,
 			},
 		});
 

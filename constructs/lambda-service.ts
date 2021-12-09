@@ -102,7 +102,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 		/**
 		 * Create all of the API handlers
 		 */
-		for (const [apiPath, apiHandler] of Object.entries(handlers.api)) {
+		for (const apiHandler of Object.values(handlers.api)) {
 			/**
 			 * Get a name for the API handler based on it's path and route
 			 */
@@ -115,7 +115,6 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			 */
 			const apiFn = new ServiceApiFunction(this, apiHandlerName, {
 				definition: apiHandler,
-				handlerFile: apiPath,
 				httpApi: this.api,
 				role,
 				authorizerId: authorizer?.ref,
