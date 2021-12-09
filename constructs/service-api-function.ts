@@ -80,7 +80,7 @@ export class ServiceApiFunction extends Construct {
 			routeKey: `${definition.method} ${definition.route}`,
 			target: cdk.Fn.join('/', ['integrations', integration.ref]),
 			authorizerId,
-			authorizationType: 'CUSTOM',
+			authorizationType: authorizerId ? 'CUSTOM' : undefined,
 		});
 	}
 }
