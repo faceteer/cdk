@@ -1,6 +1,6 @@
 {
   "name": "@faceteer/cdk",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "CDK 2.0 constructs and helpers that make composing a Lambda powered service easier.",
   "main": "index.js",
   "files": [
