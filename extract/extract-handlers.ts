@@ -1,7 +1,15 @@
 import * as fs from 'fs';
+import { pascalCase } from 'pascal-case';
 import * as path from 'path';
-import type { ApiHandlerDefinition } from '../handlers/api-handler';
-import { HandlerTypes } from '../handlers/handler-types';
+import type {
+	ApiHandlerDefinition,
+	ApiHandlerWithDefinition,
+} from '../handlers/api-handler';
+import { HandlerTypes } from '../handlers/handler';
+import {
+	QueueHandlerDefinition,
+	QueueHandlerWithDefinition,
+} from '../handlers/queue-handler';
 
 export interface HandlerNameAndPath {
 	name: string;
@@ -13,25 +21,45 @@ export function extractHandlers(path: string) {
 	const files = getAllFiles(path);
 	const handlers: {
 		api: Record<string, FullHandlerDefinition<ApiHandlerDefinition>>;
+		queue: Record<string, FullHandlerDefinition<QueueHandlerDefinition>>;
 	} = {
 		api: {},
+		queue: {},
 	};
 
 	for (const file of files) {
 		try {
-			const { type, definition } = require(file.replace(/\.ts$/g, '')).handler;
-			switch (type) {
+			const handler = require(file.replace(/\.ts$/g, '')).handler as
+				| ApiHandlerWithDefinition
+				| QueueHandlerWithDefinition<unknown>;
+			switch (handler.type) {
 				case HandlerTypes.API:
 					{
-						definition.name = `${definition.method}${definition.route.replace(
-							/\//g,
-							'-',
-						)}`;
-						definition.path = file;
-						handlers.api[definition.name] = definition;
+						const { definition } = handler;
+						const fullDefinition: FullHandlerDefinition<ApiHandlerDefinition> =
+							{
+								...definition,
+								name: `${definition.method}${definition.route.replace(
+									/\//g,
+									'-',
+								)}`,
+								path: file,
+							};
+
+						handlers.api[fullDefinition.name] = fullDefinition;
 					}
 
 					break;
+				case HandlerTypes.Queue: {
+					const { definition } = handler;
+					const fullDefinition: FullHandlerDefinition<QueueHandlerDefinition> =
+						{
+							...definition,
+							name: pascalCase(`Queue ${definition.queueName}`),
+							path: file,
+						};
+					handlers.queue[fullDefinition.name] = fullDefinition;
+				}
 			}
 		} catch (error) {
 			console.error(`Failed to parse handler: ${file}`);
