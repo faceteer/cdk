@@ -20,14 +20,6 @@ export interface QueueHandlerDefinition extends HandlerDefinition {
 	 */
 	queueName: string;
 	/**
-	 * Default wait time for ReceiveMessage calls in seconds.
-	 */
-	receiveMessageWaitTime?: number;
-	/**
-	 * The number of seconds that Amazon SQS retains a message.
-	 */
-	retentionPeriod?: number;
-	/**
 	 * The largest number of records that AWS Lambda will retrieve
 	 * from your event source at the time of invoking your function.
 	 */

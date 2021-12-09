@@ -6,6 +6,7 @@ import * as lambdaNodeJs from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Construct } from 'constructs';
 import { extractHandlers } from '../extract/extract-handlers';
 import { ServiceApiFunction } from './service-api-function';
+import { ServiceQueueFunction } from './service-queue-function';
 
 export interface LambdaServiceProps {
 	handlersFolder: string;
@@ -23,6 +24,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 	readonly grantPrincipal: iam.IPrincipal;
 
 	private functions: lambda.Function[] = [];
+	private environmentVariables: Map<string, string> = new Map();
 
 	constructor(
 		scope: Construct,
@@ -35,6 +37,9 @@ export class LambdaService extends Construct implements iam.IGrantable {
 		}: LambdaServiceProps,
 	) {
 		super(scope, id);
+
+		this.environmentVariables.set('NODE_OPTIONS', '--enable-source-maps');
+		this.environmentVariables.set('ACCOUNT_ID', cdk.Fn.ref('AWS::AccountId'));
 
 		if (!role) {
 			/**
@@ -108,16 +113,9 @@ export class LambdaService extends Construct implements iam.IGrantable {
 		 */
 		for (const apiHandler of Object.values(handlers.api)) {
 			/**
-			 * Get a name for the API handler based on it's path and route
-			 */
-			const apiHandlerName = `${apiHandler.method}${apiHandler.route.replace(
-				/\//g,
-				'-',
-			)}`;
-			/**
 			 * Add a new function to the API
 			 */
-			const apiFn = new ServiceApiFunction(this, apiHandlerName, {
+			const apiFn = new ServiceApiFunction(this, apiHandler.name, {
 				definition: apiHandler,
 				httpApi: this.api,
 				role,
@@ -125,6 +123,37 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				bundlingOptions,
 			});
 			this.functions.push(apiFn.fn);
+		}
+
+		for (const queueHandler of Object.values(handlers.queue)) {
+			/**
+			 * Create the queue handlers and their respective queues
+			 */
+			const queueFn = new ServiceQueueFunction(this, queueHandler.name, {
+				role: role,
+				definition: queueHandler,
+				bundlingOptions,
+			});
+			this.functions.push(queueFn.fn, queueFn.dlqFn);
+
+			this.environmentVariables.set(
+				queueFn.queueEnvironmentVariable,
+				queueFn.queue.queueName,
+			);
+
+			this.environmentVariables.set(
+				queueFn.dlqEnvironmentVariable,
+				queueFn.dlq.queueName,
+			);
+		}
+
+		/**
+		 * Add all environment variables
+		 */
+		for (const fn of this.functions) {
+			for (const [key, value] of this.environmentVariables.entries()) {
+				fn.addEnvironment(key, value);
+			}
 		}
 	}
 }
