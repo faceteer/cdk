@@ -25,6 +25,18 @@ describe('Parse Handlers', () => {
 				path: '/home/mckenzie/src/faceteer/cdk/fixtures/api/test-post.handler.ts',
 			},
 		});
+
+		expect(handlers.queue).toEqual({
+			QueueUpdateUser: {
+				queueName: 'updateUser',
+				memorySize: 1024,
+				timeout: 900,
+				maxBatchingWindow: 10,
+				maximumAttempts: 10,
+				name: 'QueueUpdateUser',
+				path: '/home/mckenzie/src/faceteer/cdk/fixtures/queue/test-queue.handler.ts',
+			},
+		});
 	});
 });
 
