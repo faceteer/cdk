@@ -148,7 +148,17 @@ out.tap
 
 junit.xml
 
-lib/**/*.js
-lib/**/*.d.ts
+constructs/**/*.js
+constructs/**/*.d.ts
+extract/**/*.js
+extract/**/*.d.ts
+fixtures/**/*.js
+fixtures/**/*.d.ts
+handlers/**/*.js
+handlers/**/*.d.ts
+response/**/*.js
+response/**/*.d.ts
+__tests__/**/*.js
+__tests__/**/*.d.ts
 index.js
 index.d.ts
