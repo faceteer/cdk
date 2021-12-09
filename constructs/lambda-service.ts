@@ -12,6 +12,7 @@ export interface LambdaServiceProps {
 	lambdaAuthorizer?: {
 		fn: lambda.IFunction;
 		identitySource: string[];
+		enableSimpleResponses?: boolean;
 	};
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
 	role?: iam.IRole;
@@ -98,6 +99,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				name: `${cdk.Names.uniqueId(this)}LambdaAuthorizer`,
 				identitySource: [...lambdaAuthorizer.identitySource],
 				authorizerPayloadFormatVersion: '2.0',
+				enableSimpleResponses: lambdaAuthorizer.enableSimpleResponses,
 			});
 		}
 
