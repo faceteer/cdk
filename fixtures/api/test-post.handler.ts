@@ -10,7 +10,7 @@ export const handler = ApiHandler(
 	{
 		method: 'POST',
 		route: '/users',
-		description: 'Create a handler',
+		description: 'Create a user',
 		memorySize: 256,
 		disableAuth: true,
 		timeout: 900,

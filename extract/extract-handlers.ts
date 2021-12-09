@@ -3,27 +3,37 @@ import * as path from 'path';
 import type { ApiHandlerDefinition } from '../handlers/api-handler';
 import { HandlerTypes } from '../handlers/handler-types';
 
+export interface HandlerNameAndPath {
+	name: string;
+	path: string;
+}
+
 export function extractHandlers(path: string) {
 	const files = getAllFiles(path);
 	const handlers: {
-		api: Record<string, ApiHandlerDefinition>;
+		api: Record<string, ApiHandlerDefinition & HandlerNameAndPath>;
 	} = {
 		api: {},
 	};
 
 	for (const file of files) {
 		try {
-			const handler = require(file.replace(/\.ts$/g, '')).handler;
-			switch (handler.type) {
+			const { type, definition } = require(file.replace(/\.ts$/g, '')).handler;
+			switch (type) {
 				case HandlerTypes.API:
-					handlers.api[file] = handler.definition;
-					break;
+					{
+						definition.name = `${definition.method}${definition.route.replace(
+							/\//g,
+							'-',
+						)}`;
+						definition.path = file;
+						handlers.api[definition.name] = definition;
+					}
 
-				default:
 					break;
 			}
 		} catch (error) {
-			console.error(error);
+			console.error(`Failed to parse handler: ${file}`);
 		}
 	}
 
@@ -38,7 +48,7 @@ export function extractHandlers(path: string) {
 function getAllFiles(dirPath: string, arrayOfFiles: string[] = []) {
 	const files = fs.readdirSync(dirPath);
 
-	let filesArray = arrayOfFiles || [];
+	let filesArray = arrayOfFiles;
 
 	files.forEach((file) => {
 		if (fs.statSync(`${dirPath}/${file}`).isDirectory()) {

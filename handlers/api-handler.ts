@@ -80,8 +80,8 @@ export function ApiHandler<B = undefined, Q = undefined>(
 			const validatedEvent: ValidatedApiEvent<B, Q> = {
 				...event,
 				input: {
-					body: bodyValidator(event.body),
-					query: queryValidator(event.queryStringParameters),
+					body: bodyValidator(event.body ? JSON.parse(event.body) : event.body),
+					query: queryValidator(event.queryStringParameters ?? {}),
 				},
 			};
 

@@ -3,11 +3,27 @@ import { extractHandlers } from '../../extract/extract-handlers';
 
 describe('Parse Handlers', () => {
 	test('Handlers are parsed', () => {
-		const handlers = extractHandlers(path.join(__dirname, '../test-handlers/'));
+		const handlers = extractHandlers(path.join(__dirname, '../../fixtures/'));
 
-		Object.entries(handlers.api).forEach(([path, definition]) => {
-			expect(path.endsWith('test-api.handler.ts')).toBeTruthy();
-			expect(definition.memorySize).toBe(512);
+		expect(handlers.api).toEqual({
+			'GET-users-{userId}': {
+				method: 'GET',
+				route: '/users/{userId}',
+				description: 'Get a user',
+				memorySize: 512,
+				name: 'GET-users-{userId}',
+				path: '/home/mckenzie/src/faceteer/cdk/fixtures/api/test-get.handler.ts',
+			},
+			'POST-users': {
+				method: 'POST',
+				route: '/users',
+				description: 'Create a user',
+				memorySize: 256,
+				disableAuth: true,
+				timeout: 900,
+				name: 'POST-users',
+				path: '/home/mckenzie/src/faceteer/cdk/fixtures/api/test-post.handler.ts',
+			},
 		});
 	});
 });

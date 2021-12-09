@@ -10,7 +10,7 @@ export const handler = ApiHandler(
 	{
 		method: 'GET',
 		route: '/users/{userId}',
-		description: 'Test API handler',
+		description: 'Get a user',
 		memorySize: 512,
 		validators: {
 			body: (requestBody): User => {
