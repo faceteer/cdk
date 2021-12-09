@@ -3,6 +3,18 @@
   "version": "1.0.0",
   "description": "CDK 2.0 constructs and helpers that make composing a Lambda powered service easier.",
   "main": "index.js",
+  "files": [
+    "constructs/**/*.js",
+    "constructs/**/*.d.ts",
+    "extract/**/*.js",
+    "extract/**/*.d.ts",
+    "handlers/**/*.js",
+    "handlers/**/*.d.ts",
+    "response/**/*.js",
+    "response/**/*.d.ts",
+    "index.js",
+    "index.d.ts"
+  ],
   "scripts": {
     "test": "jest --runInBand --silent --coverage",
     "test:ci": "jest --ci --runInBand --silent --coverage && codecov",
