@@ -96,6 +96,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 					'/invocations',
 				]),
 				name: `${cdk.Names.uniqueId(this)}LambdaAuthorizer`,
+				identitySource: [...lambdaAuthorizer.identitySource],
 			});
 		}
 
