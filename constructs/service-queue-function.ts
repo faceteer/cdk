@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambdaNodeJs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import { constantCase } from 'constant-case';
 import { Construct } from 'constructs';
 import type { FullHandlerDefinition } from '../extract/extract-handlers';
@@ -97,5 +98,25 @@ export class ServiceQueueFunction extends Construct {
 				IS_DLQ: 'true',
 			},
 		});
+
+		this.fn.addEventSource(
+			new lambdaEventSources.SqsEventSource(this.queue, {
+				batchSize: definition.batchSize,
+				maxBatchingWindow: definition.maxBatchingWindow
+					? cdk.Duration.seconds(definition.maxBatchingWindow)
+					: undefined,
+				reportBatchItemFailures: true,
+			}),
+		);
+
+		this.dlqFn.addEventSource(
+			new lambdaEventSources.SqsEventSource(this.dlq, {
+				batchSize: definition.batchSize,
+				maxBatchingWindow: definition.maxBatchingWindow
+					? cdk.Duration.seconds(definition.maxBatchingWindow)
+					: undefined,
+				reportBatchItemFailures: true,
+			}),
+		);
 	}
 }
