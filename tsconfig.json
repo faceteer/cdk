@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2020"],
+    "target": "ES2019",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitThis": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "alwaysStrict": true,
+    "strictBindCallApply": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": true,
+    "noFallthroughCasesInSwitch": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "removeComments": true,
+    "declaration": true,
+    "isolatedModules": true,
+    "types": ["jest", "node"]
+  },
+  "exclude": ["node_modules", "./node.d.ts", "jest.config.ts"]
+}
