@@ -7,11 +7,12 @@ export interface HandlerNameAndPath {
 	name: string;
 	path: string;
 }
+export type FullHandlerDefinition<T> = T & HandlerNameAndPath;
 
 export function extractHandlers(path: string) {
 	const files = getAllFiles(path);
 	const handlers: {
-		api: Record<string, ApiHandlerDefinition & HandlerNameAndPath>;
+		api: Record<string, FullHandlerDefinition<ApiHandlerDefinition>>;
 	} = {
 		api: {},
 	};
