@@ -5,6 +5,8 @@ describe('Parse Handlers', () => {
 	test('Handlers are parsed', () => {
 		const handlers = extractHandlers(path.join(__dirname, '../../fixtures/'));
 
+		const basePath = path.join(__dirname, '../../fixtures/');
+
 		expect(handlers.api).toEqual({
 			'GET-users-{userId}': {
 				method: 'GET',
@@ -12,7 +14,7 @@ describe('Parse Handlers', () => {
 				description: 'Get a user',
 				memorySize: 512,
 				name: 'GET-users-{userId}',
-				path: '/home/mckenzie/src/faceteer/cdk/fixtures/api/test-get.handler.ts',
+				path: `${basePath}api/test-get.handler.ts`,
 			},
 			'POST-users': {
 				method: 'POST',
@@ -22,7 +24,7 @@ describe('Parse Handlers', () => {
 				disableAuth: true,
 				timeout: 900,
 				name: 'POST-users',
-				path: '/home/mckenzie/src/faceteer/cdk/fixtures/api/test-post.handler.ts',
+				path: `${basePath}api/test-post.handler.ts`,
 			},
 		});
 
@@ -34,7 +36,7 @@ describe('Parse Handlers', () => {
 				maxBatchingWindow: 10,
 				maximumAttempts: 10,
 				name: 'QueueUpdateUser',
-				path: '/home/mckenzie/src/faceteer/cdk/fixtures/queue/test-queue.handler.ts',
+				path: `${basePath}queue/test-queue.handler.ts`,
 			},
 		});
 	});
