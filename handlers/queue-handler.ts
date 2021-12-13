@@ -4,7 +4,7 @@ import {
 	SQSClient,
 } from '@aws-sdk/client-sqs';
 import type {
-	SQSBatchResponse,
+	SQSBatchItemFailure,
 	SQSHandler,
 	SQSMessageAttribute,
 	SQSRecord,
@@ -95,20 +95,22 @@ export type QueueHandlerEvent<T> = {
 	/**
 	 * Messages that have been validated
 	 */
-	Messages: ValidatedMessage<T>[];
+	ValidMessages: ValidatedMessage<T>[];
 	/**
 	 * Messages that failed to validate
 	 */
 	InvalidMessages: InvalidMessage[];
-	/**
-	 * Messages that reached their maximum
-	 * number of retries
-	 */
-	FailedMessages: FailedMessage[];
 };
 
-export type QueueHandlerResponse = {
-	failedMessageIds: string[];
+export type DlqHandlerEvent = {
+	/**
+	 * The raw SQS records
+	 */
+	Records: SQSRecord[];
+};
+
+export type QueueHandlerResponse<T> = {
+	retry: ValidatedMessage<T>[];
 } | void;
 
 export interface QueueHandlerOptions<T> extends QueueHandlerDefinition {
@@ -320,8 +322,8 @@ export class Queues {
 				// We'll start a new batch.
 				currentBatchIndex++;
 				currentBatchByteLength = byteLength;
-				currentBatch = new Map();
 				messageBatches[currentBatchIndex] = new Map();
+				currentBatch = messageBatches[currentBatchIndex];
 			}
 
 			// Add the message to the current batch. Since
@@ -418,150 +420,18 @@ export class Queues {
 
 export function QueueHandler<T = unknown>(
 	options: QueueHandlerOptions<T>,
-	handler: AsyncHandler<QueueHandlerEvent<T>, QueueHandlerResponse>,
+	handler: AsyncHandler<QueueHandlerEvent<T>, QueueHandlerResponse<T>>,
 ): QueueHandlerWithDefinition<T> {
 	const { validator, sqs, ...definition } = options;
 
 	const maximumAttempts = definition.maximumAttempts ?? 10;
 	definition.maximumAttempts = maximumAttempts;
 
-	const sendMessages = async (messages: Message<T>[]) => {
-		return Queues.send(sqs, definition.queueName, messages);
-	};
-
-	/**
-	 * If these events are coming from the DLQ for a function we'll
-	 * simply look through the messages and decide whether or not to
-	 * queue them or not
-	 */
-	if (process.env.IS_DLQ) {
-		const dlqHandler: SQSHandler = async (event, context) => {
-			const queueEvent: QueueHandlerEvent<T> = {
-				Records: event.Records,
-				InvalidMessages: [],
-				Messages: [],
-				FailedMessages: [],
-			};
-
-			try {
-				const messagesToRetry: Message<T>[] = [];
-				/**
-				 * First go through all of the records to see if
-				 * we need to retry them
-				 */
-				for (const record of event.Records) {
-					const attempts = getAttemptsFromMessageAttribute(
-						record.messageAttributes.attempts,
-					);
-					try {
-						/**
-						 * If we've reached the maximum number of
-						 * attempts we'll go ahead and send it to the
-						 * handler to deal with
-						 */
-						if (attempts > maximumAttempts) {
-							queueEvent.FailedMessages.push({
-								attempts: attempts,
-								body: record.body,
-								error: new Error('Maximum attempts reached'),
-								messageId: record.messageId,
-							});
-						} else {
-							/**
-							 * Otherwise we'll mark these to be re-queued
-							 * to the original quue
-							 */
-							messagesToRetry.push({
-								attempts: attempts,
-								body: JSON.parse(record.body),
-							});
-						}
-					} catch (error) {
-						/**
-						 * This might happen if we fail to parse the body. If that's the
-						 * case we'll just consider the message as failed and we'll send the
-						 * message to the handler as a permanent failure
-						 */
-						queueEvent.FailedMessages.push({
-							attempts: attempts,
-							body: record.body,
-							error,
-							messageId: record.messageId,
-						});
-					}
-				}
-
-				/**
-				 * Attempt to requeue the events back to the main queue
-				 */
-				const retryResults = await Queues.send(
-					sqs,
-					definition.queueName,
-					messagesToRetry,
-				);
-
-				/**
-				 * If we failed to requeue any messages we'll send
-				 * them to the handler as permanent failures
-				 */
-				for (const failedRetry of retryResults.Failed) {
-					queueEvent.FailedMessages.push({
-						attempts: failedRetry.message.attempts,
-						body: failedRetry.message.body,
-						error: failedRetry.error,
-					});
-				}
-
-				const handlerResponse = await handler(queueEvent, context);
-				return responseToBatchResponse(handlerResponse);
-			} catch (error) {
-				/**
-				 * If we run into an error while running the DLQ we'll
-				 * go through each record tell the DLQ that they failed
-				 */
-				const errorResponse: SQSBatchResponse = {
-					batchItemFailures: [],
-				};
-
-				for (const record of event.Records) {
-					const receiveCount = Number(
-						record.attributes.ApproximateReceiveCount,
-					);
-					/**
-					 * Since we're in a DLQ, we don't want to keep sending messages
-					 * back to the DLQ when they fail to be processed by this function.
-					 *
-					 * In that case we'll want to just drop any messages
-					 */
-					if (Number.isNaN(receiveCount) || receiveCount > maximumAttempts) {
-						continue;
-					}
-					/**
-					 * Otherwise we'll go ahead and tell SQS that they should re-attempt to
-					 * deliver the message
-					 */
-					errorResponse.batchItemFailures.push({
-						itemIdentifier: record.messageId,
-					});
-				}
-
-				return errorResponse;
-			}
-		};
-
-		return Object.assign(dlqHandler, {
-			type: HandlerTypes.Queue as const,
-			definition: definition,
-			sendMessages: sendMessages,
-		});
-	}
-
 	const wrappedHandler: SQSHandler = async (event, context) => {
 		const queueEvent: QueueHandlerEvent<T> = {
 			Records: event.Records,
 			InvalidMessages: [],
-			Messages: [],
-			FailedMessages: [],
+			ValidMessages: [],
 		};
 		for (const record of event.Records) {
 			const attempts = getAttemptsFromMessageAttribute(
@@ -574,7 +444,7 @@ export function QueueHandler<T = unknown>(
 				const parsedBody = JSON.parse(record.body);
 				if (validator) {
 					const validBody = validator(parsedBody);
-					queueEvent.Messages.push({
+					queueEvent.ValidMessages.push({
 						body: validBody,
 						messageId: record.messageId,
 						attempts: attempts,
@@ -591,9 +461,38 @@ export function QueueHandler<T = unknown>(
 		}
 
 		try {
+			/**
+			 * Run the queue handler against the validated or invalid messages
+			 */
 			const handlerResponse = await handler(queueEvent, context);
-			return responseToBatchResponse(handlerResponse);
+			/**
+			 * If there's no messages to retry we'll just return
+			 */
+			if (!handlerResponse || handlerResponse.retry.length === 0) {
+				return {
+					batchItemFailures: [],
+				};
+			}
+			const messagesToRetry: ValidatedMessage<T>[] = [];
+			const permanentlyFailedMessages: SQSBatchItemFailure[] = [];
+			for (const messageToRetry of handlerResponse.retry) {
+				if (messageToRetry.attempts > maximumAttempts) {
+					permanentlyFailedMessages.push({
+						itemIdentifier: messageToRetry.messageId,
+					});
+				} else {
+					messagesToRetry.push(messageToRetry);
+				}
+			}
+			/**
+			 * Otherwise we'll re-queue any messages that failed to retry
+			 */
+			await Queues.send(sqs, definition.queueName, messagesToRetry);
+			return {
+				batchItemFailures: permanentlyFailedMessages,
+			};
 		} catch (error) {
+			console.error(error);
 			/**
 			 * If the handler fails to run we'll mark all of the events
 			 * as failed and return them
@@ -609,7 +508,9 @@ export function QueueHandler<T = unknown>(
 	return Object.assign(wrappedHandler, {
 		type: HandlerTypes.Queue as const,
 		definition: definition,
-		sendMessages: sendMessages,
+		sendMessages: async (messages: Message<T>[]) => {
+			return Queues.send(sqs, definition.queueName, messages);
+		},
 	});
 }
 
@@ -623,7 +524,7 @@ function getAttemptsFromMessageAttribute(
 	attribute?: SQSMessageAttribute,
 ): number {
 	if (!attribute) {
-		return 0;
+		return Infinity;
 	}
 
 	const attributeValue = Number(attribute.stringValue);
@@ -632,24 +533,4 @@ function getAttemptsFromMessageAttribute(
 	}
 
 	return attributeValue;
-}
-
-/**
- * Take a response from our queue handler and map it
- * to a batch response for SQS
- * @param response
- * @returns
- */
-function responseToBatchResponse(
-	response: QueueHandlerResponse,
-): SQSBatchResponse | void {
-	if (!response) {
-		return response;
-	}
-
-	return {
-		batchItemFailures: response.failedMessageIds.map((messageId) => ({
-			itemIdentifier: messageId,
-		})),
-	};
 }

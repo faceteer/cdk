@@ -81,7 +81,7 @@ export function ApiHandler<B = undefined, Q = undefined>(
 			if (result) {
 				return await result;
 			}
-			throw new Error('Promise was not returned');
+			throw new Error('The API handler return an invalid response type');
 		} catch (error) {
 			return FailedResponse(error);
 		}

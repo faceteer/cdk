@@ -20,7 +20,7 @@ export const handler = QueueHandler(
 	},
 	async (event) => {
 		return {
-			failedMessageIds: event.Records.map((record) => record.messageId),
+			retry: event.ValidMessages,
 		};
 	},
 );

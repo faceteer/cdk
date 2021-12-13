@@ -108,6 +108,70 @@ describe('Api Handler', () => {
 			expect(body.error.message).toEqual('Invalid body');
 		}
 	});
+
+	test('Api Handler Without Validator Works', async () => {
+		const handler = ApiHandler(
+			{
+				method: 'PUT',
+				route: '/users/{userId}',
+				validators: {},
+			},
+			async (event) => {
+				return SuccessResponse({ event });
+			},
+		);
+		const requestBody = {
+			id: '545467',
+			name: 'jeremy',
+		};
+
+		const response = await handler(
+			{
+				queryStringParameters: { force: true },
+				body: JSON.stringify(requestBody),
+			} as any,
+			{} as any,
+			() => {},
+		);
+
+		expect(response).toBeTruthy();
+	});
+
+	test('Invalid handler returns failed response', async () => {
+		const invalidHandler: any = () => {
+			return;
+		};
+		const handler = ApiHandler(
+			{
+				method: 'PUT',
+				route: '/users/{userId}',
+				validators: {},
+			},
+			invalidHandler,
+		);
+		const requestBody = {
+			id: '545467',
+			name: 'jeremy',
+		};
+
+		const response = await handler(
+			{
+				queryStringParameters: { force: true },
+				body: JSON.stringify(requestBody),
+			} as any,
+			{} as any,
+			() => {},
+		);
+
+		expect(response).toBeTruthy();
+		if (response && typeof response !== 'string') {
+			expect(response.statusCode).toEqual(500);
+			const body = JSON.parse(response.body ?? '{}');
+			expect(body.error.message).toEqual(
+				'The API handler return an invalid response type',
+			);
+		}
+	});
 });
 
 export {};
