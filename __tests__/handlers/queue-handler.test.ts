@@ -119,7 +119,7 @@ describe('Queue Handler', () => {
 			async (
 				event: QueueHandlerEvent<PullUserEvent>,
 			): Promise<QueueHandlerResponse<PullUserEvent>> => {
-				const [firstMessage, secondMessage] = event.ValidMessages;
+				const [, secondMessage] = event.ValidMessages;
 				return {
 					retry: [secondMessage],
 				};
@@ -160,7 +160,7 @@ describe('Queue Handler', () => {
 			async (
 				event: QueueHandlerEvent<PullUserEvent>,
 			): Promise<QueueHandlerResponse<PullUserEvent>> => {
-				const [firstMessage, secondMessage] = event.ValidMessages;
+				const [, secondMessage] = event.ValidMessages;
 				return {
 					retry: [secondMessage],
 				};
