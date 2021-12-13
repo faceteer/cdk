@@ -14,7 +14,7 @@ describe('Parse Handlers', () => {
 				description: 'Get a user',
 				memorySize: 512,
 				name: 'GET-users-{userId}',
-				path: `${basePath}/api/test-get.handler.ts`,
+				path: `${basePath}api/test-get.handler.ts`,
 			},
 			'POST-users': {
 				method: 'POST',
@@ -24,7 +24,7 @@ describe('Parse Handlers', () => {
 				disableAuth: true,
 				timeout: 900,
 				name: 'POST-users',
-				path: `${basePath}/api/test-post.handler.ts`,
+				path: `${basePath}api/test-post.handler.ts`,
 			},
 		});
 
@@ -36,7 +36,7 @@ describe('Parse Handlers', () => {
 				maxBatchingWindow: 10,
 				maximumAttempts: 10,
 				name: 'QueueUpdateUser',
-				path: `${basePath}/queue/test-queue.handler.ts`,
+				path: `${basePath}queue/test-queue.handler.ts`,
 			},
 		});
 	});
