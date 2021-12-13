@@ -16,7 +16,6 @@ export interface ServiceQueueFunctionProps {
 
 export class ServiceQueueFunction extends Construct {
 	readonly fn: lambdaNodeJs.NodejsFunction;
-	readonly dlqFn: lambdaNodeJs.NodejsFunction;
 	readonly queue: sqs.Queue;
 	readonly dlq: sqs.Queue;
 	readonly queueEnvironmentVariable: string;
@@ -90,27 +89,8 @@ export class ServiceQueueFunction extends Construct {
 			sharedFunctionProps,
 		);
 
-		this.dlqFn = new lambdaNodeJs.NodejsFunction(this, 'DlqFunction', {
-			...sharedFunctionProps,
-
-			environment: {
-				...sharedFunctionProps.environment,
-				IS_DLQ: 'true',
-			},
-		});
-
 		this.fn.addEventSource(
 			new lambdaEventSources.SqsEventSource(this.queue, {
-				batchSize: definition.batchSize,
-				maxBatchingWindow: definition.maxBatchingWindow
-					? cdk.Duration.seconds(definition.maxBatchingWindow)
-					: undefined,
-				reportBatchItemFailures: true,
-			}),
-		);
-
-		this.dlqFn.addEventSource(
-			new lambdaEventSources.SqsEventSource(this.dlq, {
 				batchSize: definition.batchSize,
 				maxBatchingWindow: definition.maxBatchingWindow
 					? cdk.Duration.seconds(definition.maxBatchingWindow)

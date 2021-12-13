@@ -134,7 +134,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				definition: queueHandler,
 				bundlingOptions,
 			});
-			this.functions.push(queueFn.fn, queueFn.dlqFn);
+			this.functions.push(queueFn.fn);
 
 			this.environmentVariables.set(
 				queueFn.queueEnvironmentVariable,
