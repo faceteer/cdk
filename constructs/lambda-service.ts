@@ -152,6 +152,10 @@ export class LambdaService extends Construct implements iam.IGrantable {
 
 		const snsTopics: Map<string, sns.Topic> = new Map();
 		for (const notificationHandler of Object.values(handlers.notification)) {
+			/**
+			 * Create any notification handlers along with any topics that
+			 * haven't been created yet
+			 */
 			let topic = snsTopics.get(notificationHandler.topicName);
 			if (!topic) {
 				topic = new sns.Topic(this, notificationHandler.topicName);
@@ -183,6 +187,19 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			for (const [key, value] of this.environmentVariables.entries()) {
 				fn.addEnvironment(key, value);
 			}
+		}
+	}
+
+	/**
+	 * Add an environment variable to the service
+	 * @param key
+	 * @param value
+	 */
+	public addEnvironment(key: string, value: string) {
+		this.environmentVariables.set(key, value);
+
+		for (const fn of this.functions) {
+			fn.addEnvironment(key, value);
 		}
 	}
 }
