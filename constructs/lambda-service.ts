@@ -26,7 +26,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 	readonly api: apigwv2.CfnApi;
 	readonly grantPrincipal: iam.IPrincipal;
 
-	private functions: lambda.Function[] = [];
+	public functions: lambda.Function[] = [];
 	private environmentVariables: Map<string, string> = new Map();
 
 	constructor(
