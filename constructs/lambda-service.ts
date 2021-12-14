@@ -3,9 +3,12 @@ import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaNodeJs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import { constantCase } from 'change-case';
 import { Construct } from 'constructs';
 import { extractHandlers } from '../extract/extract-handlers';
 import { ServiceApiFunction } from './service-api-function';
+import { ServiceNotificationFunction } from './service-notification-funciton';
 import { ServiceQueueFunction } from './service-queue-function';
 
 export interface LambdaServiceProps {
@@ -145,6 +148,32 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				queueFn.dlqEnvironmentVariable,
 				queueFn.dlq.queueName,
 			);
+		}
+
+		const snsTopics: Map<string, sns.Topic> = new Map();
+		for (const notificationHandler of Object.values(handlers.notification)) {
+			let topic = snsTopics.get(notificationHandler.topicName);
+			if (!topic) {
+				topic = new sns.Topic(this, notificationHandler.topicName);
+				snsTopics.set(notificationHandler.topicName, topic);
+				this.environmentVariables.set(
+					`TOPIC_${constantCase(notificationHandler.topicName)}`,
+					topic.topicName,
+				);
+				topic.grantPublish(role);
+			}
+			const notificationFn = new ServiceNotificationFunction(
+				this,
+				notificationHandler.name,
+				{
+					definition: notificationHandler,
+					role: role,
+					topic: topic,
+					bundlingOptions,
+				},
+			);
+
+			this.functions.push(notificationFn.fn);
 		}
 
 		/**
