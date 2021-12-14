@@ -59,4 +59,5 @@ export enum HandlerTypes {
 	Cron = 'cron',
 	Queue = 'queue',
 	Event = 'event',
+	Notification = 'notification',
 }
