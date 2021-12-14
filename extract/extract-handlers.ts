@@ -105,6 +105,7 @@ export function extractHandlers(path: string) {
 			}
 		} catch (error) {
 			console.error(`Failed to parse handler: ${file}`);
+			console.error(error);
 		}
 	}
 
