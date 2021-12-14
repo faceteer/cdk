@@ -73,6 +73,7 @@ export class ServiceQueueFunction extends Construct {
 			description: definition.description,
 			allowAllOutbound: definition.allowAllOutbound,
 			allowPublicSubnet: definition.allowPublicSubnet,
+			memorySize: definition.memorySize ?? 256,
 			bundling: {
 				...bundlingOptions,
 				sourceMap: true,
