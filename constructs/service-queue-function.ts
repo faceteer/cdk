@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambdaNodeJs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import { constantCase } from 'constant-case';
@@ -12,6 +13,7 @@ export interface ServiceQueueFunctionProps {
 	role: iam.IRole;
 	definition: FullHandlerDefinition<QueueHandlerDefinition>;
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
+	layers?: lambda.ILayerVersion[];
 }
 
 export class ServiceQueueFunction extends Construct {
@@ -25,7 +27,7 @@ export class ServiceQueueFunction extends Construct {
 	constructor(
 		scope: Construct,
 		id: string,
-		{ role, definition, bundlingOptions }: ServiceQueueFunctionProps,
+		{ role, definition, bundlingOptions, layers }: ServiceQueueFunctionProps,
 	) {
 		super(scope, id);
 
@@ -81,6 +83,7 @@ export class ServiceQueueFunction extends Construct {
 				HANDLER_NAME: definition.name,
 				ACCOUNT_ID: cdk.Fn.ref('AWS::AccountId'),
 			},
+			layers,
 		};
 
 		this.fn = new lambdaNodeJs.NodejsFunction(

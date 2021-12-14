@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambdaNodeJs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import type { HandlerNameAndPath } from '../extract/extract-handlers';
 import type { ApiHandlerDefinition } from '../handlers/api-handler';
@@ -12,6 +13,7 @@ export interface ServiceApiFunctionProps {
 	definition: ApiHandlerDefinition & HandlerNameAndPath;
 	authorizerId?: string;
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
+	layers?: lambda.ILayerVersion[];
 }
 
 export class ServiceApiFunction extends Construct {
@@ -27,6 +29,7 @@ export class ServiceApiFunction extends Construct {
 			definition,
 			authorizerId,
 			bundlingOptions = {},
+			layers,
 		}: ServiceApiFunctionProps,
 	) {
 		super(scope, id);
@@ -54,6 +57,7 @@ export class ServiceApiFunction extends Construct {
 				NODE_OPTIONS: '--enable-source-maps',
 				HANDLER_NAME: definition.name,
 			},
+			layers,
 		});
 
 		this.fn.grantInvoke(apiGatewayServicePrincipal);

@@ -20,6 +20,7 @@ export interface LambdaServiceProps {
 	};
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
 	role?: iam.IRole;
+	layers?: lambda.ILayerVersion[];
 }
 
 export class LambdaService extends Construct implements iam.IGrantable {

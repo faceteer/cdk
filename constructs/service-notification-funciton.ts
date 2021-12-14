@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as lambdaNodeJs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
@@ -13,6 +14,7 @@ export interface ServiceNotificationFunctionProps {
 	definition: FullHandlerDefinition<NotificationHandlerDefinition>;
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
 	topic: sns.Topic;
+	layers?: lambda.ILayerVersion[];
 }
 
 export class ServiceNotificationFunction extends Construct {
@@ -28,6 +30,7 @@ export class ServiceNotificationFunction extends Construct {
 			definition,
 			bundlingOptions,
 			topic,
+			layers,
 		}: ServiceNotificationFunctionProps,
 	) {
 		super(scope, id);
@@ -56,6 +59,7 @@ export class ServiceNotificationFunction extends Construct {
 				HANDLER_NAME: definition.name,
 				ACCOUNT_ID: cdk.Fn.ref('AWS::AccountId'),
 			},
+			layers,
 		});
 
 		this.dlq = new sqs.Queue(this, 'DLQ', {
