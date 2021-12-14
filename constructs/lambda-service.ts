@@ -25,6 +25,7 @@ export interface LambdaServiceProps {
 
 export class LambdaService extends Construct implements iam.IGrantable {
 	readonly api: apigwv2.CfnApi;
+	readonly stage: apigwv2.CfnStage;
 	readonly grantPrincipal: iam.IPrincipal;
 
 	public functions: lambda.Function[] = [];
@@ -84,6 +85,12 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				maxAge: 864000,
 			},
 			name: cdk.Names.uniqueId(this),
+		});
+
+		this.stage = new apigwv2.CfnStage(this, 'Stage', {
+			apiId: this.api.ref,
+			stageName: '$default',
+			autoDeploy: true,
 		});
 
 		/**
