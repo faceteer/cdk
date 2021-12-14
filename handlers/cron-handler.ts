@@ -3,6 +3,7 @@ import { HandlerDefinition, HandlerTypes } from './handler';
 import type { ScheduledHandler } from 'aws-lambda';
 
 export interface CronHandlerDefinition extends HandlerDefinition {
+	name: string;
 	schedule: Schedule;
 }
 

@@ -39,6 +39,25 @@ describe('Parse Handlers', () => {
 				path: `${basePath}queue/test-queue.handler.ts`,
 			},
 		});
+
+		expect(handlers.cron).toEqual({
+			QueuePulls: {
+				name: 'QueuePulls',
+				schedule: {
+					expressionString: 'cron(0 4 * * ? *)',
+				},
+				path: `${basePath}cron/test-cron.handler.ts`,
+			},
+		});
+
+		expect(handlers.notification).toEqual({
+			IncomingEmailSendToProcessQueue: {
+				name: 'IncomingEmailSendToProcessQueue',
+				topicName: 'incoming-email',
+				memorySize: 256,
+				path: `${basePath}notificaiton/test-notification.handler.ts`,
+			},
+		});
 	});
 });
 

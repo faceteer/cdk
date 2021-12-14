@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
-	Message,
 	QueueHandler,
 	QueueHandlerEvent,
 	QueueHandlerResponse,
@@ -12,6 +11,7 @@ import type {
 	SQSClient,
 } from '@aws-sdk/client-sqs';
 import { SQSRecord } from 'aws-lambda';
+import { Message } from '../../handlers/message';
 
 const mockSend = jest.fn(
 	async (command: SendMessageBatchCommand): Promise<SendMessageBatchResult> => {
