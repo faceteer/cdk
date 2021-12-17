@@ -56,6 +56,7 @@ export class ServiceApiFunction extends Construct {
 			environment: {
 				NODE_OPTIONS: '--enable-source-maps',
 				HANDLER_NAME: definition.name,
+				DD_TAGS: `handler_type:api,handler_name:${definition.name}`,
 			},
 			layers,
 		});

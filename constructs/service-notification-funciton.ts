@@ -59,6 +59,7 @@ export class ServiceNotificationFunction extends Construct {
 				NODE_OPTIONS: '--enable-source-maps',
 				HANDLER_NAME: definition.name,
 				ACCOUNT_ID: cdk.Fn.ref('AWS::AccountId'),
+				DD_TAGS: `handler_type:notification,handler_name:${definition.name}`,
 			},
 			layers,
 		});
