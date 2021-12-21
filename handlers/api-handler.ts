@@ -25,18 +25,20 @@ export interface ApiHandlerDefinition extends HandlerDefinition {
 	scopes?: string[];
 }
 
-export interface ApiHandlerOptions<B, Q> extends ApiHandlerDefinition {
+export interface ApiHandlerOptions<B, Q, A> extends ApiHandlerDefinition {
 	validators: {
 		body?: (requestBody: any) => B;
 		query?: (requestQuery: any) => Q;
 	};
+	isAuthorized?: (event: APIGatewayProxyEventV2) => A;
 }
 
-export type ValidatedApiEvent<B, Q> = APIGatewayProxyEventV2 & {
+export type ValidatedApiEvent<B, Q, A> = APIGatewayProxyEventV2 & {
 	input: {
 		body: B;
 		query: Q;
 	};
+	auth: A;
 };
 
 export type ApiHandlerWithDefinition = APIGatewayProxyHandlerV2 & {
@@ -44,37 +46,37 @@ export type ApiHandlerWithDefinition = APIGatewayProxyHandlerV2 & {
 	definition: ApiHandlerDefinition;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function defaultValidator<T>(): T {
-	return undefined as unknown as T;
-}
-
 /**
  * Creates a handler that will be attached to the service api
  * @param options
  * @param handler
  * @returns
  */
-export function ApiHandler<B = undefined, Q = undefined>(
-	options: ApiHandlerOptions<B, Q>,
-	handler: Handler<ValidatedApiEvent<B, Q>, APIGatewayProxyStructuredResultV2>,
+export function ApiHandler<B = unknown, Q = unknown, A = unknown>(
+	options: ApiHandlerOptions<B, Q, A>,
+	handler: Handler<
+		ValidatedApiEvent<B, Q, A>,
+		APIGatewayProxyStructuredResultV2
+	>,
 ): ApiHandlerWithDefinition {
-	const { validators, ...definition } = options;
+	const { validators, isAuthorized, ...definition } = options;
 	const wrappedHandler: APIGatewayProxyHandlerV2 = async (
 		event,
 		context,
 		callback,
 	) => {
 		try {
-			const bodyValidator = validators.body ?? defaultValidator;
-			const queryValidator = validators.query ?? defaultValidator;
-
-			const validatedEvent: ValidatedApiEvent<B, Q> = {
+			const validatedEvent: ValidatedApiEvent<B, Q, A> = {
 				...event,
 				input: {
-					body: bodyValidator(event.body ? JSON.parse(event.body) : event.body),
-					query: queryValidator(event.queryStringParameters ?? {}),
+					body: validators.body
+						? validators.body(event.body ? JSON.parse(event.body) : event.body)
+						: (undefined as unknown as B),
+					query: validators.query
+						? validators.query(event.queryStringParameters ?? {})
+						: (undefined as unknown as Q),
 				},
+				auth: isAuthorized ? isAuthorized(event) : (undefined as unknown as A),
 			};
 
 			const result = handler(validatedEvent, context, callback);
