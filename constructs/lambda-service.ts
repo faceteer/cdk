@@ -13,6 +13,11 @@ import { ServiceQueueFunction } from './service-queue-function';
 
 export interface LambdaServiceProps {
 	handlersFolder: string;
+	jwtAuthorizer?: {
+		identitySource: string[];
+		audience: string[];
+		issuer: string;
+	};
 	lambdaAuthorizer?: {
 		fn: lambda.IFunction;
 		identitySource: string[];
@@ -37,6 +42,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 		{
 			handlersFolder,
 			lambdaAuthorizer,
+			jwtAuthorizer,
 			bundlingOptions = {},
 			role,
 		}: LambdaServiceProps,
@@ -124,6 +130,17 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				identitySource: [...lambdaAuthorizer.identitySource],
 				authorizerPayloadFormatVersion: '2.0',
 				enableSimpleResponses: lambdaAuthorizer.enableSimpleResponses,
+			});
+		} else if (jwtAuthorizer) {
+			authorizer = new apigwv2.CfnAuthorizer(this, 'JwtAuthorizer', {
+				apiId: this.api.ref,
+				authorizerType: 'JWT',
+				name: `${cdk.Names.uniqueId(this)}JwtAuthorizer`,
+				identitySource: [...jwtAuthorizer.identitySource],
+				jwtConfiguration: {
+					audience: [...jwtAuthorizer.audience],
+					issuer: jwtAuthorizer.issuer,
+				},
 			});
 		}
 
