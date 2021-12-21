@@ -12,7 +12,6 @@ export interface ServiceApiFunctionProps {
 	httpApi: apigwv2.CfnApi;
 	definition: ApiHandlerDefinition & HandlerNameAndPath;
 	authorizer?: apigwv2.CfnAuthorizer;
-	authorizerId?: string;
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
 	layers?: lambda.ILayerVersion[];
 }

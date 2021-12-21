@@ -155,7 +155,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				definition: apiHandler,
 				httpApi: this.api,
 				role,
-				authorizerId: authorizer?.ref,
+				authorizer: authorizer,
 				bundlingOptions,
 			});
 			this.functions.push(apiFn.fn);
