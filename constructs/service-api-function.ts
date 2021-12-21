@@ -11,6 +11,7 @@ export interface ServiceApiFunctionProps {
 	role: iam.IRole;
 	httpApi: apigwv2.CfnApi;
 	definition: ApiHandlerDefinition & HandlerNameAndPath;
+	authorizer?: apigwv2.CfnAuthorizer;
 	authorizerId?: string;
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
 	layers?: lambda.ILayerVersion[];
@@ -26,13 +27,21 @@ export class ServiceApiFunction extends Construct {
 		{
 			role,
 			httpApi,
+			authorizer,
 			definition,
-			authorizerId,
 			bundlingOptions = {},
 			layers,
 		}: ServiceApiFunctionProps,
 	) {
 		super(scope, id);
+
+		const authorizerId = authorizer?.ref;
+		let authorizerType = 'NONE';
+		if (authorizer?.authorizerType === 'JWT') {
+			authorizerType = 'JWT ';
+		} else if (authorizer?.authorizerType === 'REQUEST') {
+			authorizerType = 'CUSTOM';
+		}
 
 		const apiGatewayServicePrincipal = new iam.ServicePrincipal(
 			'apigateway.amazonaws.com',
@@ -84,8 +93,8 @@ export class ServiceApiFunction extends Construct {
 			apiId: httpApi.ref,
 			routeKey: `${definition.method} ${definition.route}`,
 			target: cdk.Fn.join('/', ['integrations', integration.ref]),
-			authorizerId,
-			authorizationType: authorizerId ? 'CUSTOM' : undefined,
+			authorizerId: definition.disableAuth ? undefined : authorizerId,
+			authorizationType: definition.disableAuth ? 'NONE' : authorizerType,
 		});
 	}
 }
