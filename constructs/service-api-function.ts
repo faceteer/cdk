@@ -34,7 +34,6 @@ export class ServiceApiFunction extends Construct {
 	) {
 		super(scope, id);
 
-		const authorizerId = authorizer?.ref;
 		let authorizerType = 'NONE';
 		if (authorizer?.authorizerType === 'JWT') {
 			authorizerType = 'JWT ';
@@ -92,7 +91,7 @@ export class ServiceApiFunction extends Construct {
 			apiId: httpApi.ref,
 			routeKey: `${definition.method} ${definition.route}`,
 			target: cdk.Fn.join('/', ['integrations', integration.ref]),
-			authorizerId: definition.disableAuth ? undefined : authorizerId,
+			authorizerId: definition.disableAuth ? undefined : authorizer?.ref,
 			authorizationType: definition.disableAuth ? 'NONE' : authorizerType,
 		});
 	}
