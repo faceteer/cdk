@@ -36,7 +36,7 @@ export class ServiceApiFunction extends Construct {
 
 		let authorizerType = 'NONE';
 		if (authorizer?.authorizerType === 'JWT') {
-			authorizerType = 'JWT ';
+			authorizerType = 'JWT';
 		} else if (authorizer?.authorizerType === 'REQUEST') {
 			authorizerType = 'CUSTOM';
 		}
