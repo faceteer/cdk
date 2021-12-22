@@ -14,6 +14,7 @@ export interface ServiceApiFunctionProps {
 	authorizer?: apigwv2.CfnAuthorizer;
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
 	layers?: lambda.ILayerVersion[];
+	defaultScopes?: string[];
 }
 
 export class ServiceApiFunction extends Construct {
@@ -30,6 +31,7 @@ export class ServiceApiFunction extends Construct {
 			definition,
 			bundlingOptions = {},
 			layers,
+			defaultScopes = [],
 		}: ServiceApiFunctionProps,
 	) {
 		super(scope, id);
@@ -93,6 +95,7 @@ export class ServiceApiFunction extends Construct {
 			target: cdk.Fn.join('/', ['integrations', integration.ref]),
 			authorizerId: definition.disableAuth ? undefined : authorizer?.ref,
 			authorizationType: definition.disableAuth ? 'NONE' : authorizerType,
+			authorizationScopes: definition.scopes ?? defaultScopes,
 		});
 	}
 }
