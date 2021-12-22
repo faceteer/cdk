@@ -95,7 +95,10 @@ export class ServiceApiFunction extends Construct {
 			target: cdk.Fn.join('/', ['integrations', integration.ref]),
 			authorizerId: definition.disableAuth ? undefined : authorizer?.ref,
 			authorizationType: definition.disableAuth ? 'NONE' : authorizerType,
-			authorizationScopes: definition.scopes ?? defaultScopes,
+			authorizationScopes:
+				definition.disableAuth || authorizerType !== 'JWT'
+					? undefined
+					: definition.scopes ?? defaultScopes,
 		});
 	}
 }
