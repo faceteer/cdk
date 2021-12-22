@@ -30,7 +30,7 @@ export interface ApiHandlerOptions<B, Q, A> extends ApiHandlerDefinition {
 		body?: (requestBody: any) => B;
 		query?: (requestQuery: any) => Q;
 	};
-	isAuthorized?: (event: APIGatewayProxyEventV2) => A;
+	isAuthorized?: (event: APIGatewayProxyEventV2) => A | false;
 }
 
 export type ValidatedApiEvent<B, Q, A> = APIGatewayProxyEventV2 & {
@@ -66,6 +66,20 @@ export function ApiHandler<B = unknown, Q = unknown, A = unknown>(
 		callback,
 	) => {
 		try {
+			let auth = undefined as unknown as A;
+			if (isAuthorized) {
+				try {
+					const authResult = isAuthorized(event);
+					if (authResult) {
+						auth = authResult;
+					} else {
+						return FailedResponse('Unauthorized', { statusCode: 403 });
+					}
+				} catch {
+					return FailedResponse('Unauthorized', { statusCode: 403 });
+				}
+			}
+
 			const validatedEvent: ValidatedApiEvent<B, Q, A> = {
 				...event,
 				input: {
@@ -76,7 +90,7 @@ export function ApiHandler<B = unknown, Q = unknown, A = unknown>(
 						? validators.query(event.queryStringParameters ?? {})
 						: (undefined as unknown as Q),
 				},
-				auth: isAuthorized ? isAuthorized(event) : (undefined as unknown as A),
+				auth: auth,
 			};
 
 			const result = handler(validatedEvent, context, callback);
