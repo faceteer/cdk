@@ -82,7 +82,7 @@ export function ApiHandler<
 		APIGatewayProxyStructuredResultV2
 	>,
 ): ApiHandlerWithDefinition {
-	const { validators, isAuthorized, ...definition } = options;
+	const { validators, isAuthorized, pathParameters, ...definition } = options;
 	const wrappedHandler: APIGatewayProxyHandlerV2 = async (
 		event,
 		context,
@@ -103,14 +103,14 @@ export function ApiHandler<
 				}
 			}
 
-			const pathParameters = checkPathParameters<P>(
+			const validatedParameters = checkPathParameters<P>(
 				event.pathParameters,
-				options.pathParameters,
+				pathParameters,
 			);
 
-			if (typeof pathParameters === 'string') {
+			if (typeof validatedParameters === 'string') {
 				return FailedResponse(
-					`The parameter "${pathParameters}" was not found in the route "${options.route}". Please check your route configuration`,
+					`The parameter "${validatedParameters}" was not found in the route "${options.route}". Please check your route configuration`,
 				);
 			}
 
@@ -123,7 +123,7 @@ export function ApiHandler<
 					query: validators.query
 						? validators.query(event.queryStringParameters ?? {})
 						: (undefined as unknown as Q),
-					path: pathParameters,
+					path: validatedParameters,
 					auth: auth,
 				},
 			};
