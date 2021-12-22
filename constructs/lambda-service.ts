@@ -8,7 +8,7 @@ import { constantCase } from 'change-case';
 import { Construct } from 'constructs';
 import { extractHandlers } from '../extract/extract-handlers';
 import { ServiceApiFunction } from './service-api-function';
-import { ServiceNotificationFunction } from './service-notification-funciton';
+import { ServiceNotificationFunction } from './service-notification-function';
 import { ServiceQueueFunction } from './service-queue-function';
 
 export interface LambdaServiceProps {

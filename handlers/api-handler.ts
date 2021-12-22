@@ -25,12 +25,16 @@ export interface ApiHandlerDefinition extends HandlerDefinition {
 	scopes?: string[];
 }
 
+export type ApiHandlerAuthorizer<A> = (
+	event: APIGatewayProxyEventV2,
+) => A | false;
+
 export interface ApiHandlerOptions<B, Q, A> extends ApiHandlerDefinition {
 	validators: {
 		body?: (requestBody: any) => B;
 		query?: (requestQuery: any) => Q;
 	};
-	isAuthorized?: (event: APIGatewayProxyEventV2) => A | false;
+	isAuthorized?: ApiHandlerAuthorizer<A>;
 }
 
 export type ValidatedApiEvent<B, Q, A> = APIGatewayProxyEventV2 & {
