@@ -1,4 +1,5 @@
 import type {
+	APIGatewayProxyEventPathParameters,
 	APIGatewayProxyEventV2,
 	APIGatewayProxyHandlerV2,
 	APIGatewayProxyStructuredResultV2,
@@ -6,6 +7,11 @@ import type {
 } from 'aws-lambda';
 import { FailedResponse } from '../response/failed-response';
 import { HandlerDefinition, HandlerTypes } from './handler';
+
+export type ApiPathParameters<T extends ReadonlyArray<string>> = Record<
+	T[number],
+	string
+>;
 
 export interface ApiHandlerDefinition extends HandlerDefinition {
 	/** HTTP method for which this function is invoked. */
@@ -29,20 +35,28 @@ export type ApiHandlerAuthorizer<A> = (
 	event: APIGatewayProxyEventV2,
 ) => A | false;
 
-export interface ApiHandlerOptions<B, Q, A> extends ApiHandlerDefinition {
+export interface ApiHandlerOptions<B, Q, A, P extends ReadonlyArray<string>>
+	extends ApiHandlerDefinition {
 	validators: {
 		body?: (requestBody: any) => B;
 		query?: (requestQuery: any) => Q;
 	};
 	isAuthorized?: ApiHandlerAuthorizer<A>;
+	pathParameters?: P;
 }
 
-export type ValidatedApiEvent<B, Q, A> = APIGatewayProxyEventV2 & {
+export type ValidatedApiEvent<
+	B,
+	Q,
+	A,
+	P extends ReadonlyArray<string>,
+> = APIGatewayProxyEventV2 & {
 	input: {
 		body: B;
 		query: Q;
+		path: ApiPathParameters<P>;
+		auth: A;
 	};
-	auth: A;
 };
 
 export type ApiHandlerWithDefinition = APIGatewayProxyHandlerV2 & {
@@ -56,10 +70,15 @@ export type ApiHandlerWithDefinition = APIGatewayProxyHandlerV2 & {
  * @param handler
  * @returns
  */
-export function ApiHandler<B = unknown, Q = unknown, A = unknown>(
-	options: ApiHandlerOptions<B, Q, A>,
+export function ApiHandler<
+	B = unknown,
+	Q = unknown,
+	A = unknown,
+	P extends ReadonlyArray<string> = never,
+>(
+	options: ApiHandlerOptions<B, Q, A, P>,
 	handler: Handler<
-		ValidatedApiEvent<B, Q, A>,
+		ValidatedApiEvent<B, Q, A, P>,
 		APIGatewayProxyStructuredResultV2
 	>,
 ): ApiHandlerWithDefinition {
@@ -84,7 +103,18 @@ export function ApiHandler<B = unknown, Q = unknown, A = unknown>(
 				}
 			}
 
-			const validatedEvent: ValidatedApiEvent<B, Q, A> = {
+			const pathParameters = checkPathParameters<P>(
+				event.pathParameters,
+				options.pathParameters,
+			);
+
+			if (typeof pathParameters === 'string') {
+				return FailedResponse(
+					`The parameter "${pathParameters}" was not found in the route "${options.route}". Please check your route configuration`,
+				);
+			}
+
+			const validatedEvent: ValidatedApiEvent<B, Q, A, P> = {
 				...event,
 				input: {
 					body: validators.body
@@ -93,8 +123,9 @@ export function ApiHandler<B = unknown, Q = unknown, A = unknown>(
 					query: validators.query
 						? validators.query(event.queryStringParameters ?? {})
 						: (undefined as unknown as Q),
+					path: pathParameters,
+					auth: auth,
 				},
-				auth: auth,
 			};
 
 			const result = handler(validatedEvent, context, callback);
@@ -111,4 +142,30 @@ export function ApiHandler<B = unknown, Q = unknown, A = unknown>(
 		definition,
 		type: HandlerTypes.API as const,
 	});
+}
+
+/**
+ * Check to make sure that path parameters that have
+ * been defined exist on the function
+ * @param pathParameters
+ * @param definedParameters
+ * @returns
+ */
+function checkPathParameters<P extends ReadonlyArray<string>>(
+	pathParameters: APIGatewayProxyEventPathParameters = {},
+	definedParameters?: P,
+): ApiPathParameters<P> | string {
+	if (!definedParameters) {
+		return {} as ApiPathParameters<P>;
+	}
+	const validatedParameters: Record<string, string> = {};
+	for (const param of definedParameters) {
+		const value = pathParameters[param];
+		if (!value) {
+			return param;
+		}
+		validatedParameters[param] = value;
+	}
+
+	return validatedParameters as ApiPathParameters<P>;
 }

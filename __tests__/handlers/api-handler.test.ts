@@ -20,6 +20,11 @@ describe('Api Handler', () => {
 			return input as PutUserQuery;
 		});
 
+		const requestBody = {
+			id: '545467',
+			name: 'jeremy',
+		};
+
 		const handler = ApiHandler(
 			{
 				method: 'PUT',
@@ -28,22 +33,23 @@ describe('Api Handler', () => {
 					body: bodyValidator,
 					query: queryValidator,
 				},
+				pathParameters: ['userId'] as const,
 			},
 			async (event) => {
 				const user = event.input.body;
 				const { force = false } = event.input.query;
+				expect(event.input.path.userId).toBe(requestBody.id);
 
 				return SuccessResponse({ user, force });
 			},
 		);
-		const requestBody = {
-			id: '545467',
-			name: 'jeremy',
-		};
 
 		const response = await handler(
 			{
 				queryStringParameters: { force: true },
+				pathParameters: {
+					userId: requestBody.id,
+				},
 				body: JSON.stringify(requestBody),
 			} as any,
 			{} as any,
