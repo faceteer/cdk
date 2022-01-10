@@ -4,6 +4,9 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaNodeJs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as sns from 'aws-cdk-lib/aws-sns';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
+import * as route53 from 'aws-cdk-lib/aws-route53';
+import * as route53Targets from 'aws-cdk-lib/aws-route53-targets';
 import { constantCase } from 'change-case';
 import { Construct } from 'constructs';
 import { extractHandlers } from '../extract/extract-handlers';
@@ -27,6 +30,11 @@ export interface LambdaServiceProps {
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
 	role?: iam.IRole;
 	layers?: lambda.ILayerVersion[];
+	domain?: {
+		certificate: acm.ICertificate;
+		domainName: string;
+		route53Zone?: route53.IHostedZone;
+	};
 }
 
 export class LambdaService extends Construct implements iam.IGrantable {
@@ -36,6 +44,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 
 	public functions: lambda.Function[] = [];
 	private environmentVariables: Map<string, string> = new Map();
+	private snsTopics: Map<string, sns.Topic> = new Map();
 
 	constructor(
 		scope: Construct,
@@ -47,6 +56,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			bundlingOptions = {},
 			role,
 			defaultScopes,
+			domain,
 		}: LambdaServiceProps,
 	) {
 		super(scope, id);
@@ -98,7 +108,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 					'DELETE',
 				],
 				allowOrigins: ['*'],
-				maxAge: 864000,
+				maxAge: 3600,
 			},
 			name: cdk.Names.uniqueId(this),
 		});
@@ -146,6 +156,36 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			});
 		}
 
+		if (domain) {
+			const { certificate, domainName, route53Zone } = domain;
+			const apiGatewayDomain = new apigwv2.CfnDomainName(this, 'ApiDomain', {
+				domainName: domainName,
+				domainNameConfigurations: [
+					{
+						certificateArn: certificate.certificateArn,
+						endpointType: 'REGIONAL',
+					},
+				],
+			});
+			new apigwv2.CfnApiMapping(this, 'ApiMapping', {
+				apiId: this.api.ref,
+				domainName: apiGatewayDomain.ref,
+				stage: this.stage.ref,
+			});
+
+			if (route53Zone) {
+				const target = new route53Targets.ApiGatewayv2DomainProperties(
+					apiGatewayDomain.attrRegionalDomainName,
+					apiGatewayDomain.attrRegionalHostedZoneId,
+				);
+				new route53.ARecord(this, 'ApiARecord', {
+					zone: route53Zone,
+					target: route53.RecordTarget.fromAlias(target),
+					recordName: domainName,
+				});
+			}
+		}
+
 		/**
 		 * Create all of the API handlers
 		 */
@@ -186,16 +226,15 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			);
 		}
 
-		const snsTopics: Map<string, sns.Topic> = new Map();
 		for (const notificationHandler of Object.values(handlers.notification)) {
 			/**
 			 * Create any notification handlers along with any topics that
 			 * haven't been created yet
 			 */
-			let topic = snsTopics.get(notificationHandler.topicName);
+			let topic = this.snsTopics.get(notificationHandler.topicName);
 			if (!topic) {
 				topic = new sns.Topic(this, notificationHandler.topicName);
-				snsTopics.set(notificationHandler.topicName, topic);
+				this.snsTopics.set(notificationHandler.topicName, topic);
 				this.environmentVariables.set(
 					`TOPIC_${constantCase(notificationHandler.topicName)}`,
 					topic.topicName,
@@ -236,6 +275,19 @@ export class LambdaService extends Construct implements iam.IGrantable {
 
 		for (const fn of this.functions) {
 			fn.addEnvironment(key, value);
+		}
+	}
+
+	/**
+	 * Retrieves an SNS topic by it's name
+	 * @param topicName
+	 */
+	public getSnsTopic(topicName: string) {
+		const topic = this.snsTopics.get(topicName);
+		if (!topic) {
+			throw new Error(
+				`Unable to find a topic with the name: ${topicName}. Make sure that topic has been configured in a lambda handler already`,
+			);
 		}
 	}
 }
