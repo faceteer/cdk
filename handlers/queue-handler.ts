@@ -106,7 +106,7 @@ export interface sendMessagesOptions<T> {
  * Class to help connecting to and interfacing with
  * sqs driven lambda functions
  */
-export class Queues {
+export class QueueManager {
 	/**
 	 * The maximum size for an SQS message
 	 */
@@ -439,7 +439,7 @@ export function QueueHandler<T = unknown>(
 			/**
 			 * Otherwise we'll re-queue any messages that failed to retry
 			 */
-			await Queues.send(sqs, definition.queueName, messagesToRetry);
+			await QueueManager.send(sqs, definition.queueName, messagesToRetry);
 			return {
 				batchItemFailures: permanentlyFailedMessages,
 			};
@@ -461,7 +461,7 @@ export function QueueHandler<T = unknown>(
 		type: HandlerTypes.Queue as const,
 		definition: definition,
 		sendMessages: async (messages: Message<T>[]) => {
-			return Queues.send(sqs, definition.queueName, messages);
+			return QueueManager.send(sqs, definition.queueName, messages);
 		},
 	});
 }
