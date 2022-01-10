@@ -1,25 +1,35 @@
 import { ApiHandler } from '../../handlers/api-handler';
 import { SuccessResponse } from '../../response/success-response';
 
+import { JSONSchemaType } from 'ajv';
+
 interface User {
 	id: string;
 	name: string;
 }
 
+const UserSchema: JSONSchemaType<User> = {
+	type: 'object',
+	properties: {
+		id: { type: 'string' },
+		name: { type: 'string' },
+	},
+	required: ['id', 'name'],
+};
+
 interface PutUserQuery {
 	force?: boolean;
 }
 
+const PutUserQuerySchema: JSONSchemaType<PutUserQuery> = {
+	type: 'object',
+	properties: {
+		force: { type: 'boolean', nullable: true },
+	},
+};
+
 describe('Api Handler', () => {
 	test('Api Handler validates', async () => {
-		const bodyValidator = jest.fn((input: any) => {
-			return input as User;
-		});
-
-		const queryValidator = jest.fn((input: any) => {
-			return input as PutUserQuery;
-		});
-
 		const requestBody = {
 			id: '545467',
 			name: 'jeremy',
@@ -29,9 +39,10 @@ describe('Api Handler', () => {
 			{
 				method: 'PUT',
 				route: '/users/{userId}',
-				validators: {
-					body: bodyValidator,
-					query: queryValidator,
+				schemas: {
+					body: UserSchema,
+					response: UserSchema,
+					query: PutUserQuerySchema,
 				},
 				pathParameters: ['userId'] as const,
 			},
@@ -39,14 +50,15 @@ describe('Api Handler', () => {
 				const user = event.input.body;
 				const { force = false } = event.input.query;
 				expect(event.input.path.userId).toBe(requestBody.id);
+				expect(force).toBeTruthy();
 
-				return SuccessResponse({ user, force });
+				return SuccessResponse(user);
 			},
 		);
 
 		const response = await handler(
 			{
-				queryStringParameters: { force: true },
+				rawQueryString: 'force=true',
 				pathParameters: {
 					userId: requestBody.id,
 				},
@@ -57,14 +69,9 @@ describe('Api Handler', () => {
 		);
 
 		expect(response).toBeTruthy();
-		expect(bodyValidator).toBeCalledWith(requestBody);
-		expect(queryValidator).toBeCalledWith({ force: true });
 		if (response) {
 			expect(response).toEqual({
-				body: JSON.stringify({
-					user: requestBody,
-					force: true,
-				}),
+				body: JSON.stringify(requestBody),
 				statusCode: 200,
 				headers: {
 					'Content-Type': 'application/json',
@@ -74,27 +81,23 @@ describe('Api Handler', () => {
 	});
 
 	test('Api Handler Handles Invalid Requests', async () => {
-		const bodyValidator = jest.fn((): User => {
-			throw new Error('Invalid body');
-		});
-
 		const handler = ApiHandler(
 			{
 				method: 'PUT',
 				route: '/users/{userId}',
-				validators: {
-					body: bodyValidator,
+				schemas: {
+					body: UserSchema,
+					response: UserSchema,
 				},
 			},
 			async (event) => {
 				const user = event.input.body;
 
-				return SuccessResponse({ user });
+				return SuccessResponse(user);
 			},
 		);
 		const requestBody = {
-			id: '545467',
-			name: 'jeremy',
+			bad: 'key',
 		};
 
 		const response = await handler(
@@ -106,12 +109,19 @@ describe('Api Handler', () => {
 			() => {},
 		);
 
-		expect(bodyValidator).toThrow();
 		expect(response).toBeTruthy();
 		if (response && typeof response !== 'string') {
 			expect(response.statusCode).toEqual(500);
 			const body = JSON.parse(response.body ?? '{}');
-			expect(body.error.message).toEqual('Invalid body');
+			expect(body).toEqual({
+				instancePath: '',
+				schemaPath: '#/required',
+				keyword: 'required',
+				params: {
+					missingProperty: 'id',
+				},
+				message: "must have required property 'id'",
+			});
 		}
 	});
 
@@ -120,10 +130,14 @@ describe('Api Handler', () => {
 			{
 				method: 'PUT',
 				route: '/users/{userId}',
-				validators: {},
+				schemas: {
+					body: UserSchema,
+					response: UserSchema,
+				},
+				pathParameters: ['userId'] as const,
 			},
 			async (event) => {
-				return SuccessResponse({ event });
+				return SuccessResponse(event.input.body);
 			},
 		);
 		const requestBody = {
@@ -135,6 +149,9 @@ describe('Api Handler', () => {
 			{
 				queryStringParameters: { force: true },
 				body: JSON.stringify(requestBody),
+				pathParameters: {
+					userId: '545467',
+				},
 			} as any,
 			{} as any,
 			() => {},
@@ -151,7 +168,11 @@ describe('Api Handler', () => {
 			{
 				method: 'PUT',
 				route: '/users/{userId}',
-				validators: {},
+				schemas: {
+					body: UserSchema,
+					response: UserSchema,
+				},
+				pathParameters: ['userId'] as const,
 			},
 			invalidHandler,
 		);
@@ -164,6 +185,9 @@ describe('Api Handler', () => {
 			{
 				queryStringParameters: { force: true },
 				body: JSON.stringify(requestBody),
+				pathParameters: {
+					userId: '545467',
+				},
 			} as any,
 			{} as any,
 			() => {},

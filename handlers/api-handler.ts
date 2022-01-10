@@ -1,12 +1,18 @@
+import Ajv, { JSONSchemaType, ValidateFunction } from 'ajv';
 import type {
 	APIGatewayProxyEventPathParameters,
 	APIGatewayProxyEventV2,
 	APIGatewayProxyHandlerV2,
-	APIGatewayProxyStructuredResultV2,
 	Handler,
 } from 'aws-lambda';
-import { FailedResponse } from '../response/failed-response';
+import * as qs from 'qs';
+import { FailedResponse, IFailedResponse, ISuccessResponse } from '../response';
 import { HandlerDefinition, HandlerTypes } from './handler';
+
+const ajv = new Ajv({
+	removeAdditional: 'all',
+	coerceTypes: true,
+});
 
 export type ApiPathParameters<T extends ReadonlyArray<string>> = Record<
 	T[number],
@@ -35,13 +41,14 @@ export type ApiHandlerAuthorizer<A> = (
 	event: APIGatewayProxyEventV2,
 ) => A | false;
 
-export interface ApiHandlerOptions<B, Q, A, P extends ReadonlyArray<string>>
+export interface ApiHandlerOptions<B, Q, A, P extends ReadonlyArray<string>, R>
 	extends ApiHandlerDefinition {
-	validators: {
-		body?: (requestBody: any) => B;
-		query?: (requestQuery: any) => Q;
+	schemas: {
+		body?: JSONSchemaType<B>;
+		query?: JSONSchemaType<Q>;
+		response?: JSONSchemaType<R>;
 	};
-	isAuthorized?: ApiHandlerAuthorizer<A>;
+	authorizer?: ApiHandlerAuthorizer<A>;
 	pathParameters?: P;
 }
 
@@ -59,10 +66,35 @@ export type ValidatedApiEvent<
 	};
 };
 
-export type ApiHandlerWithDefinition = APIGatewayProxyHandlerV2 & {
+export type ApiHandlerFunction<
+	B,
+	Q,
+	A,
+	R,
+	P extends ReadonlyArray<string>,
+> = Handler<
+	ValidatedApiEvent<B, Q, A, P>,
+	ISuccessResponse<R> | IFailedResponse
+>;
+
+export type ApiHandlerWithDefinition<
+	B = never,
+	Q = never,
+	R = never,
+> = APIGatewayProxyHandlerV2 & {
 	type: HandlerTypes.API;
 	definition: ApiHandlerDefinition;
+	schemas: {
+		body?: JSONSchemaType<B>;
+		query?: JSONSchemaType<Q>;
+		response?: JSONSchemaType<R>;
+	};
 };
+
+interface AjvValidators<B, Q> {
+	body?: ValidateFunction<B>;
+	query?: ValidateFunction<Q>;
+}
 
 /**
  * Creates a handler that will be attached to the service api
@@ -75,24 +107,29 @@ export function ApiHandler<
 	Q = unknown,
 	A = unknown,
 	P extends ReadonlyArray<string> = never,
+	R = unknown,
 >(
-	options: ApiHandlerOptions<B, Q, A, P>,
-	handler: Handler<
-		ValidatedApiEvent<B, Q, A, P>,
-		APIGatewayProxyStructuredResultV2
-	>,
-): ApiHandlerWithDefinition {
-	const { validators, isAuthorized, pathParameters, ...definition } = options;
-	const wrappedHandler: APIGatewayProxyHandlerV2 = async (
-		event,
-		context,
-		callback,
-	) => {
+	options: ApiHandlerOptions<B, Q, A, P, R>,
+	handler: ApiHandlerFunction<B, Q, A, R, P>,
+): ApiHandlerWithDefinition<B, Q, R> {
+	const { schemas, authorizer, pathParameters, ...definition } = options;
+
+	const ajvValidators: AjvValidators<B, Q> = {};
+
+	if (schemas.body) {
+		ajvValidators.body = ajv.compile(schemas.body);
+	}
+
+	if (schemas.query) {
+		ajvValidators.query = ajv.compile(schemas.query);
+	}
+
+	const wrappedHandler: APIGatewayProxyHandlerV2 = async (event, context) => {
 		try {
 			let auth = undefined as unknown as A;
-			if (isAuthorized) {
+			if (authorizer) {
 				try {
-					const authResult = isAuthorized(event);
+					const authResult = authorizer(event);
 					if (authResult) {
 						auth = authResult;
 					} else {
@@ -114,23 +151,44 @@ export function ApiHandler<
 				);
 			}
 
+			let queryBody: unknown;
+			if (event.rawQueryString) {
+				try {
+					queryBody = qs.parse(event.rawQueryString);
+				} catch (error) {
+					return FailedResponse(error);
+				}
+			}
+
+			const validatedBody = validateInput(ajvValidators.body, event.body ?? {});
+			const validatedQuery = validateInput(
+				ajvValidators.query,
+				queryBody ?? {},
+			);
+
 			const validatedEvent: ValidatedApiEvent<B, Q, A, P> = {
 				...event,
 				input: {
-					body: validators.body
-						? validators.body(event.body ? JSON.parse(event.body) : event.body)
-						: (undefined as unknown as B),
-					query: validators.query
-						? validators.query(event.queryStringParameters ?? {})
-						: (undefined as unknown as Q),
+					body: validatedBody,
+					query: validatedQuery,
 					path: validatedParameters,
 					auth: auth,
 				},
 			};
 
-			const result = handler(validatedEvent, context, callback);
+			const result = handler(validatedEvent, context, () => {});
 			if (result) {
-				return await result;
+				const finalResult = await result;
+				if ('bodyString' in finalResult) {
+					return {
+						body: finalResult.bodyString,
+						cookies: finalResult.cookies,
+						headers: finalResult.headers,
+						isBase64Encoded: finalResult.isBase64Encoded,
+						statusCode: finalResult.statusCode,
+					};
+				}
+				return finalResult;
 			}
 			throw new Error('The API handler return an invalid response type');
 		} catch (error) {
@@ -141,7 +199,38 @@ export function ApiHandler<
 	return Object.assign(wrappedHandler, {
 		definition,
 		type: HandlerTypes.API as const,
+		schemas,
 	});
+}
+
+/**
+ * Validate the input for our query or our body depending
+ * @param validator
+ * @param input
+ * @returns
+ */
+function validateInput<T>(
+	validator?: ValidateFunction<T>,
+	input?: string | unknown,
+): T {
+	if (!validator) {
+		return input as unknown as T;
+	}
+	/**
+	 * Assume any string inputs are JSON
+	 */
+	if (typeof input === 'string') {
+		input = JSON.parse(input);
+	}
+
+	if (validator(input)) {
+		return input;
+	}
+	const [validationError] = validator.errors ?? [];
+	throw (
+		validationError ??
+		new Error('Unknown error running AJV validator for input')
+	);
 }
 
 /**

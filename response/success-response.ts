@@ -1,4 +1,15 @@
-import type { APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
+export interface ISuccessResponse<T> {
+	statusCode?: number | undefined;
+	headers?:
+		| {
+				[header: string]: boolean | number | string;
+		  }
+		| undefined;
+	body: T;
+	bodyString: string;
+	isBase64Encoded?: boolean | undefined;
+	cookies?: string[] | undefined;
+}
 
 export interface SuccessResponseOptions {
 	statusCode?: number;
@@ -8,7 +19,7 @@ export interface SuccessResponseOptions {
 export function SuccessResponse<T = unknown>(
 	body: T,
 	{ headers = {}, statusCode = 200 }: SuccessResponseOptions = {},
-): APIGatewayProxyStructuredResultV2 {
+): ISuccessResponse<T> {
 	const responseHeaders: Record<string, boolean | number | string> = {
 		'Content-Type': 'application/json',
 		...headers,
@@ -25,14 +36,16 @@ export function SuccessResponse<T = unknown>(
 			typeof body === 'boolean'
 		) {
 			return {
-				body: JSON.stringify({ message: body }),
+				body: body,
+				bodyString: JSON.stringify({ message: body }),
 				statusCode,
 				headers: responseHeaders,
 			};
 		}
 
 		return {
-			body: JSON.stringify(body),
+			body: body,
+			bodyString: JSON.stringify(body),
 			statusCode,
 			headers: responseHeaders,
 		};
@@ -42,13 +55,16 @@ export function SuccessResponse<T = unknown>(
 		 */
 		if (error instanceof Error) {
 			return {
-				body: JSON.stringify({ error: error.message }),
+				body: body,
+				bodyString: JSON.stringify({ error: error.message }),
 				headers: responseHeaders,
 				statusCode: 500,
 			};
 		}
+
 		return {
-			body: JSON.stringify({
+			body: body,
+			bodyString: JSON.stringify({
 				error: 'Unhandled Error Building Success Response',
 			}),
 			headers: responseHeaders,
