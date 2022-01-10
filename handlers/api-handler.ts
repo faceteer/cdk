@@ -19,7 +19,8 @@ export type ApiPathParameters<T extends ReadonlyArray<string>> = Record<
 	string
 >;
 
-export interface ApiHandlerDefinition extends HandlerDefinition {
+export interface ApiHandlerDefinition<B = never, Q = never, R = never>
+	extends HandlerDefinition {
 	/** HTTP method for which this function is invoked. */
 	method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 	/**
@@ -35,6 +36,12 @@ export interface ApiHandlerDefinition extends HandlerDefinition {
 	 * Optional overrides of the scopes for a route
 	 */
 	scopes?: string[];
+
+	schemas: {
+		body?: JSONSchemaType<B>;
+		query?: JSONSchemaType<Q>;
+		response?: JSONSchemaType<R>;
+	};
 }
 
 export type ApiHandlerAuthorizer<A> = (
@@ -42,12 +49,7 @@ export type ApiHandlerAuthorizer<A> = (
 ) => A | false;
 
 export interface ApiHandlerOptions<B, Q, A, P extends ReadonlyArray<string>, R>
-	extends ApiHandlerDefinition {
-	schemas: {
-		body?: JSONSchemaType<B>;
-		query?: JSONSchemaType<Q>;
-		response?: JSONSchemaType<R>;
-	};
+	extends ApiHandlerDefinition<B, Q, R> {
 	authorizer?: ApiHandlerAuthorizer<A>;
 	pathParameters?: P;
 }
@@ -83,12 +85,7 @@ export type ApiHandlerWithDefinition<
 	R = never,
 > = APIGatewayProxyHandlerV2 & {
 	type: HandlerTypes.API;
-	definition: ApiHandlerDefinition;
-	schemas: {
-		body?: JSONSchemaType<B>;
-		query?: JSONSchemaType<Q>;
-		response?: JSONSchemaType<R>;
-	};
+	definition: ApiHandlerDefinition<B, Q, R>;
 };
 
 interface AjvValidators<B, Q> {
@@ -197,9 +194,11 @@ export function ApiHandler<
 	};
 
 	return Object.assign(wrappedHandler, {
-		definition,
+		definition: {
+			...definition,
+			schemas,
+		},
 		type: HandlerTypes.API as const,
-		schemas,
 	});
 }
 

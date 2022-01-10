@@ -15,6 +15,20 @@ describe('Parse Handlers', () => {
 				memorySize: 512,
 				name: 'GET-users-{userId}',
 				path: `${basePath}api/test-get.handler.ts`,
+				schemas: {
+					body: {
+						type: 'object',
+						properties: {
+							userId: {
+								type: 'string',
+							},
+							email: {
+								type: 'string',
+							},
+						},
+						required: ['email', 'userId'],
+					},
+				},
 			},
 			'POST-users': {
 				method: 'POST',
@@ -25,6 +39,32 @@ describe('Parse Handlers', () => {
 				timeout: 900,
 				name: 'POST-users',
 				path: `${basePath}api/test-post.handler.ts`,
+				schemas: {
+					body: {
+						type: 'object',
+						properties: {
+							userId: {
+								type: 'string',
+							},
+							email: {
+								type: 'string',
+							},
+						},
+						required: ['email', 'userId'],
+					},
+					response: {
+						type: 'object',
+						properties: {
+							userId: {
+								type: 'string',
+							},
+							email: {
+								type: 'string',
+							},
+						},
+						required: ['email', 'userId'],
+					},
+				},
 			},
 		});
 
