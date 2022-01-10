@@ -103,6 +103,13 @@ export interface sendMessagesOptions<T> {
 }
 
 /**
+ * A function that sends messages to a queue
+ */
+export type QueueSender<T> = (
+	messages: Message<T>[],
+) => Promise<QueueResults<T>>;
+
+/**
  * Class to help connecting to and interfacing with
  * sqs driven lambda functions
  */
@@ -171,6 +178,21 @@ export class QueueManager {
 		const randomDelayInSeconds = Math.floor(Math.random() * maxDelay);
 
 		return Math.max(delayInSeconds, randomDelayInSeconds);
+	}
+
+	/**
+	 * Generate a bound function that can send events to an SQS queue
+	 * @param sqs
+	 * @param queueName
+	 * @returns
+	 */
+	static generateQueueSender<T>(
+		sqs: SQSClient,
+		queueName: string,
+	): QueueSender<T> {
+		return (messages) => {
+			return this.send<T>(sqs, queueName, messages);
+		};
 	}
 
 	/**

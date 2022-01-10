@@ -3,7 +3,7 @@ import {
 	QueueHandler,
 	QueueHandlerEvent,
 	QueueHandlerResponse,
-	Queues,
+	QueueManager,
 } from '../../handlers';
 import type {
 	SendMessageBatchCommand,
@@ -210,7 +210,7 @@ describe('Queue Handler', () => {
 			}
 		}
 
-		const result = await Queues.send<PullUserEvent>(
+		const result = await QueueManager.send<PullUserEvent>(
 			sqs,
 			'test-queue',
 			pullUserEvents,
