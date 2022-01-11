@@ -289,5 +289,6 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				`Unable to find a topic with the name: ${topicName}. Make sure that topic has been configured in a lambda handler already`,
 			);
 		}
+		return topic;
 	}
 }
