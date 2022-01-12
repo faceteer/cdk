@@ -17,7 +17,7 @@
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "removeComments": true,
+    "removeComments": false,
     "declaration": true,
     "isolatedModules": true,
     "types": ["jest", "node"]
