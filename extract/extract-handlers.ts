@@ -125,7 +125,7 @@ function getAllFiles(dirPath: string, arrayOfFiles: string[] = []) {
 	files.forEach((file) => {
 		if (fs.statSync(`${dirPath}/${file}`).isDirectory()) {
 			filesArray = getAllFiles(`${dirPath}/${file}`, arrayOfFiles);
-		} else if (file.includes('.handler.') && !files.includes('.test.')) {
+		} else if (file.includes('.handler.') && !file.includes('.test.')) {
 			filesArray.push(path.join(dirPath, '/', file));
 		}
 	});
