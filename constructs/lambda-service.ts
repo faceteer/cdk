@@ -193,10 +193,6 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			/**
 			 * Validate that `pathParameters` and `route` are consistent
 			 */
-			console.log(
-				'Starting to bundle apiHandler: ',
-				JSON.stringify(apiHandler),
-			);
 			const regex = /\{[a-zA-Z_$0-9]+\}/g;
 			const pathParameters = [...(apiHandler.pathParameters ?? [])];
 			const routeParameters =
@@ -205,10 +201,6 @@ export class LambdaService extends Construct implements iam.IGrantable {
 					?.map((param) => param.substring(1, param.length - 1)) ?? [];
 			pathParameters.sort();
 			routeParameters.sort();
-
-			console.log('pathParameters', pathParameters);
-			console.log('routeParameters', routeParameters);
-
 			if (JSON.stringify(pathParameters) !== JSON.stringify(routeParameters)) {
 				throw new Error(
 					`The Api Handler definition in "${apiHandler.path}" does not have properly configured path parameters`,
