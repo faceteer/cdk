@@ -11,6 +11,7 @@ describe('Parse Handlers', () => {
 			'GET-users-{userId}': {
 				method: 'GET',
 				route: '/users/{userId}',
+				pathParameters: ['userId'],
 				description: 'Get a user',
 				memorySize: 512,
 				name: 'GET-users-{userId}',

@@ -19,8 +19,12 @@ export type ApiPathParameters<T extends ReadonlyArray<string>> = Record<
 	string
 >;
 
-export interface ApiHandlerDefinition<B = never, Q = never, R = never>
-	extends HandlerDefinition {
+export interface ApiHandlerDefinition<
+	B = never,
+	Q = never,
+	R = never,
+	P extends ReadonlyArray<string> = ReadonlyArray<string>,
+> extends HandlerDefinition {
 	/** HTTP method for which this function is invoked. */
 	method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 	/**
@@ -36,6 +40,11 @@ export interface ApiHandlerDefinition<B = never, Q = never, R = never>
 	 * Optional overrides of the scopes for a route
 	 */
 	scopes?: string[];
+	/**
+	 * Parameters within the route. If specified, the route must
+	 * contain `{parameter-name}`, ex: /users/{userId}
+	 */
+	pathParameters?: P;
 
 	schemas: {
 		body?: JSONSchemaType<B>;
@@ -49,9 +58,8 @@ export type ApiHandlerAuthorizer<A> = (
 ) => A | false;
 
 export interface ApiHandlerOptions<B, Q, A, P extends ReadonlyArray<string>, R>
-	extends ApiHandlerDefinition<B, Q, R> {
+	extends ApiHandlerDefinition<B, Q, R, P> {
 	authorizer?: ApiHandlerAuthorizer<A>;
-	pathParameters?: P;
 }
 
 export type ValidatedApiEvent<
@@ -109,7 +117,7 @@ export function ApiHandler<
 	options: ApiHandlerOptions<B, Q, A, P, R>,
 	handler: ApiHandlerFunction<B, Q, A, R, P>,
 ): ApiHandlerWithDefinition<B, Q, R> {
-	const { schemas, authorizer, pathParameters, ...definition } = options;
+	const { schemas, authorizer, ...definition } = options;
 
 	const ajvValidators: AjvValidators<B, Q> = {};
 
@@ -139,7 +147,7 @@ export function ApiHandler<
 
 			const validatedParameters = checkPathParameters<P>(
 				event.pathParameters,
-				pathParameters,
+				definition.pathParameters,
 			);
 
 			if (typeof validatedParameters === 'string') {
