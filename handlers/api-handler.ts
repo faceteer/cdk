@@ -44,9 +44,15 @@ export interface ApiHandlerDefinition<B = never, Q = never, R = never>
 	};
 }
 
-export type ApiHandlerAuthorizer<B, Q, P extends ReadonlyArray<string>, A, R> = (
+export type ApiHandlerAuthorizer<
+	B,
+	Q,
+	P extends ReadonlyArray<string>,
+	A,
+	R,
+> = (
 	event: ParsedApiEvent<B, Q, P>,
-	handlerOptions: ApiHandlerOptions<B, Q, A, P, R>
+	handlerOptions: ApiHandlerOptions<B, Q, A, P, R>,
 ) => A | false;
 
 export interface ApiHandlerOptions<B, Q, A, P extends ReadonlyArray<string>, R>
@@ -69,9 +75,14 @@ export type ValidatedApiEvent<
 	};
 };
 
-export type ParsedApiEvent<B, Q, P extends ReadonlyArray<string>, A = never> = 
-	Omit<ValidatedApiEvent<B, Q, A, P>, 'input'> & 
-	{ input: Omit<ValidatedApiEvent<B, Q, A, P>['input'], 'auth'> }
+export type ParsedApiEvent<
+	B,
+	Q,
+	P extends ReadonlyArray<string>,
+	A = never,
+> = Omit<ValidatedApiEvent<B, Q, A, P>, 'input'> & {
+	input: Omit<ValidatedApiEvent<B, Q, A, P>['input'], 'auth'>;
+};
 
 export type ApiHandlerFunction<
 	B,
@@ -167,10 +178,10 @@ export function ApiHandler<
 			const parsedEvent: ParsedApiEvent<B, Q, P> = {
 				...event,
 				input: {
-					body: validatedBody,
-					query: validatedQuery,
+					body: validateBodyResult.data,
+					query: validateQueryResult.data,
 					path: validatedParameters,
-				}
+				},
 			};
 
 			let auth = undefined as unknown as A;
@@ -190,9 +201,7 @@ export function ApiHandler<
 			const validatedEvent: ValidatedApiEvent<B, Q, A, P> = {
 				...event,
 				input: {
-					body: validateBodyResult.data,
-					query: validateQueryResult.data,
-					path: validatedParameters,
+					...parsedEvent.input,
 					auth: auth,
 				},
 			};
