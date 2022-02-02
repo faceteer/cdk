@@ -107,6 +107,7 @@ export interface SendMessagesOptions<T> {
  */
 export type QueueSender<T> = (
 	messages: Message<T>[],
+	options?: SendMessagesOptions<T>,
 ) => Promise<QueueResults<T>>;
 
 /**
@@ -190,7 +191,7 @@ export class QueueManager {
 		sqs: SQSClient,
 		queueName: string,
 	): QueueSender<T> {
-		return (messages, options: SendMessagesOptions<T> = {}) => {
+		return (messages, options) => {
 			return this.send<T>(sqs, queueName, messages, options);
 		};
 	}
