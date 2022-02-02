@@ -82,7 +82,7 @@ export type QueueHandlerWithDefinition<T> = SQSHandler & {
 	sendMessages: (messages: Message<T>[]) => Promise<QueueResults<T>>;
 };
 
-export interface sendMessagesOptions<T> {
+export interface SendMessagesOptions<T> {
 	/**
 	 * How many parallel requests to
 	 * make to SQS at a time
@@ -190,8 +190,8 @@ export class QueueManager {
 		sqs: SQSClient,
 		queueName: string,
 	): QueueSender<T> {
-		return (messages) => {
-			return this.send<T>(sqs, queueName, messages);
+		return (messages, options: SendMessagesOptions<T> = {}) => {
+			return this.send<T>(sqs, queueName, messages, options);
 		};
 	}
 
@@ -214,7 +214,7 @@ export class QueueManager {
 			concurrentRequestLimit = 2,
 			uniqueKey,
 			randomDelay,
-		}: sendMessagesOptions<T> = {},
+		}: SendMessagesOptions<T> = {},
 	): Promise<QueueResults<T>> {
 		const uris = this.getUris(queueName);
 		const queueResults: QueueResults<T> = {
