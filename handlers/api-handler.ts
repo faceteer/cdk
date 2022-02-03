@@ -33,7 +33,7 @@ export interface ApiHandlerDefinition<B = never, Q = never, R = never>
 	 */
 	disableAuth?: boolean;
 	/**
-	 * Optional overrides of the scopes for a route
+	 * Optional scopes to add for a route
 	 */
 	scopes?: string[];
 
