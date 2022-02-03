@@ -6,3 +6,4 @@ export * from './queue-handler';
 export * from './s3-handler';
 export * from './notification-handler';
 export * from './message';
+export * from './edge-handler';

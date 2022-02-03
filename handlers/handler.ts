@@ -60,4 +60,5 @@ export enum HandlerTypes {
 	Queue = 'queue',
 	Event = 'event',
 	Notification = 'notification',
+	Edge = 'edge',
 }

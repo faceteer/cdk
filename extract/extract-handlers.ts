@@ -11,6 +11,10 @@ import type {
 	ApiHandlerDefinition,
 	ApiHandlerWithDefinition,
 } from '../handlers/api-handler';
+import {
+	EdgeHandlerDefinition,
+	EdgeHandlerWithDefinition,
+} from '../handlers/edge-handler';
 import { HandlerTypes } from '../handlers/handler';
 import {
 	QueueHandlerDefinition,
@@ -33,11 +37,13 @@ export function extractHandlers(path: string) {
 			FullHandlerDefinition<NotificationHandlerDefinition>
 		>;
 		cron: Record<string, FullHandlerDefinition<CronHandlerDefinition>>;
+		edge: Record<string, FullHandlerDefinition<EdgeHandlerDefinition>>;
 	} = {
 		api: {},
 		queue: {},
 		notification: {},
 		cron: {},
+		edge: {},
 	};
 
 	for (const file of files) {
@@ -46,7 +52,8 @@ export function extractHandlers(path: string) {
 				| ApiHandlerWithDefinition
 				| QueueHandlerWithDefinition<unknown>
 				| CronHandlerWithDefinition
-				| NotificationHandlerWithDefinition;
+				| NotificationHandlerWithDefinition
+				| EdgeHandlerWithDefinition;
 			switch (handler.type) {
 				case HandlerTypes.API:
 					{
@@ -100,6 +107,21 @@ export function extractHandlers(path: string) {
 							};
 
 						handlers.notification[fullDefinition.name] = fullDefinition;
+					}
+					break;
+				case HandlerTypes.Edge:
+					{
+						const { definition } = handler;
+						const fullDefinition: FullHandlerDefinition<EdgeHandlerDefinition> =
+							{
+								...definition,
+								path: file,
+								name: pascalCase(
+									`${definition.eventType}${definition.distributionId}`,
+								),
+							};
+
+						handlers.edge[fullDefinition.name] = fullDefinition;
 					}
 					break;
 			}

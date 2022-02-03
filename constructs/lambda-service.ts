@@ -13,6 +13,7 @@ import { extractHandlers } from '../extract/extract-handlers';
 import { ServiceApiFunction } from './service-api-function';
 import { ServiceNotificationFunction } from './service-notification-function';
 import { ServiceQueueFunction } from './service-queue-function';
+import { ServiceEdgeFunction } from './service-edge-function';
 
 export interface LambdaServiceProps {
 	handlersFolder: string;
@@ -253,6 +254,20 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			);
 
 			this.functions.push(notificationFn.fn);
+		}
+
+		/**
+		 * Create all of the API handlers
+		 */
+		for (const edgeHandler of Object.values(handlers.edge)) {
+			/**
+			 * Add a new function to the API
+			 */
+			new ServiceEdgeFunction(this, edgeHandler.name, {
+				definition: edgeHandler,
+				role,
+				environmentalVariables: this.environmentVariables,
+			});
 		}
 
 		/**
