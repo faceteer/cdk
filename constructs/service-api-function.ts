@@ -98,7 +98,7 @@ export class ServiceApiFunction extends Construct {
 			authorizationScopes:
 				definition.disableAuth || authorizerType !== 'JWT'
 					? undefined
-					: definition.scopes ?? defaultScopes,
+					: [...(definition?.scopes ?? []), ...defaultScopes],
 		});
 	}
 }
