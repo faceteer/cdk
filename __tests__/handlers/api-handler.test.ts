@@ -112,7 +112,7 @@ describe('Api Handler', () => {
 
 		expect(response).toBeTruthy();
 		if (response && typeof response !== 'string') {
-			expect(response.statusCode).toEqual(500);
+			expect(response.statusCode).toEqual(400);
 			const body = JSON.parse(response.body ?? '{}');
 			expect(body).toEqual({
 				instancePath: '',
