@@ -2,6 +2,7 @@ import { ApiHandler } from '../../handlers/api-handler';
 import { SuccessResponse } from '../../response/success-response';
 
 import { JSONSchemaType } from 'ajv';
+import { invariant } from '../../util/invariant';
 
 interface User {
 	id: string;
@@ -111,7 +112,7 @@ describe('Api Handler', () => {
 
 		expect(response).toBeTruthy();
 		if (response && typeof response !== 'string') {
-			expect(response.statusCode).toEqual(500);
+			expect(response.statusCode).toEqual(400);
 			const body = JSON.parse(response.body ?? '{}');
 			expect(body).toEqual({
 				instancePath: '',
@@ -201,6 +202,41 @@ describe('Api Handler', () => {
 				'The API handler return an invalid response type',
 			);
 		}
+	});
+
+	test('Returns a 400 on validation failures', async () => {
+		const handler = ApiHandler(
+			{
+				method: 'PUT',
+				route: '/users/{userId}',
+				schemas: {
+					body: UserSchema,
+					response: UserSchema,
+				},
+				pathParameters: ['userId'] as const,
+			},
+			async (event) => {
+				return SuccessResponse(event.input.body);
+			},
+		);
+		const requestBody = {
+			id: '545467',
+		};
+
+		const response = await handler(
+			{
+				queryStringParameters: { force: true },
+				body: JSON.stringify(requestBody),
+				pathParameters: {
+					userId: '545467',
+				},
+			} as any,
+			{} as any,
+			() => {},
+		);
+
+		invariant(response && typeof response !== 'string');
+		expect(response.statusCode).toBe(400);
 	});
 });
 

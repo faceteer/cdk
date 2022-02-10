@@ -1,4 +1,4 @@
-import Ajv, { JSONSchemaType, ValidateFunction } from 'ajv';
+import Ajv, { ErrorObject, JSONSchemaType, ValidateFunction } from 'ajv';
 import type {
 	APIGatewayProxyEventPathParameters,
 	APIGatewayProxyEventV2,
@@ -157,17 +157,27 @@ export function ApiHandler<
 				}
 			}
 
-			const validatedBody = validateInput(ajvValidators.body, event.body ?? {});
-			const validatedQuery = validateInput(
+			const validateBodyResult = validateInput(
+				ajvValidators.body,
+				event.body ?? {},
+			);
+			if (!validateBodyResult.success) {
+				return FailedResponse(validateBodyResult.error, { statusCode: 400 });
+			}
+
+			const validateQueryResult = validateInput(
 				ajvValidators.query,
 				queryBody ?? {},
 			);
+			if (!validateQueryResult.success) {
+				return FailedResponse(validateQueryResult.error, { statusCode: 400 });
+			}
 
 			const validatedEvent: ValidatedApiEvent<B, Q, A, P> = {
 				...event,
 				input: {
-					body: validatedBody,
-					query: validatedQuery,
+					body: validateBodyResult.data,
+					query: validateQueryResult.data,
 					path: validatedParameters,
 					auth: auth,
 				},
@@ -211,9 +221,11 @@ export function ApiHandler<
 function validateInput<T>(
 	validator?: ValidateFunction<T>,
 	input?: string | unknown,
-): T {
+):
+	| { success: false; error: ErrorObject<string, Record<string, any>, unknown> }
+	| { success: true; data: T } {
 	if (!validator) {
-		return input as unknown as T;
+		return { success: true, data: input as unknown as T };
 	}
 	/**
 	 * Assume any string inputs are JSON
@@ -223,13 +235,13 @@ function validateInput<T>(
 	}
 
 	if (validator(input)) {
-		return input;
+		return { success: true, data: input };
 	}
 	const [validationError] = validator.errors ?? [];
-	throw (
-		validationError ??
-		new Error('Unknown error running AJV validator for input')
-	);
+	if (validationError) {
+		return { success: false, error: validationError };
+	}
+	throw new Error('Unknown error running AJV validator for input');
 }
 
 /**
