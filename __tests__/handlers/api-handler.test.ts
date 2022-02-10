@@ -300,6 +300,33 @@ describe('Api Handler', () => {
 		invariant(response && typeof response !== 'string' && response.body);
 		expect(JSON.parse(response.body)).toStrictEqual({ userId: userId });
 	});
+
+	test('When the authorizer function throws, it will return a 403', async () => {
+		const handler = ApiHandler(
+			{
+				method: 'GET',
+				route: '/test',
+				schemas: {},
+				authorizer: () => {
+					throw new Error('an error!!');
+				},
+			},
+			async () => {
+				return SuccessResponse({});
+			},
+		);
+
+		const response = await handler(
+			{
+				queryStringParameters: { force: true },
+			} as any,
+			{} as any,
+			() => {},
+		);
+
+		invariant(response && typeof response !== 'string' && response.body);
+		expect(response.statusCode).toBe(403);
+	});
 });
 
 export {};
