@@ -238,6 +238,95 @@ describe('Api Handler', () => {
 		invariant(response && typeof response !== 'string');
 		expect(response.statusCode).toBe(400);
 	});
+
+	test('Authorizer rejects request when it returns false', async () => {
+		const handler = ApiHandler(
+			{
+				method: 'GET',
+				route: '/users/{userId}',
+				schemas: {},
+				pathParameters: ['userId'] as const,
+				authorizer: () => false,
+			},
+			async () => {
+				return SuccessResponse('testing');
+			},
+		);
+
+		const response = await handler(
+			{
+				queryStringParameters: { force: true },
+				pathParameters: {
+					userId: '545467',
+				},
+			} as any,
+			{} as any,
+			() => {},
+		);
+
+		invariant(response && typeof response !== 'string');
+		expect(response.statusCode).toEqual(403);
+	});
+
+	test('Authorizer return value is attached to input value', async () => {
+		const userId = '545467';
+
+		const handler = ApiHandler(
+			{
+				method: 'GET',
+				route: '/users/{userId}',
+				schemas: {},
+				pathParameters: ['userId'] as const,
+				authorizer: (event) => {
+					return event.input.path.userId;
+				},
+			},
+			async (event) => {
+				return SuccessResponse({ userId: event.input.auth });
+			},
+		);
+
+		const response = await handler(
+			{
+				queryStringParameters: { force: true },
+				pathParameters: {
+					userId: userId,
+				},
+			} as any,
+			{} as any,
+			() => {},
+		);
+
+		invariant(response && typeof response !== 'string' && response.body);
+		expect(JSON.parse(response.body)).toStrictEqual({ userId: userId });
+	});
+
+	test('When the authorizer function throws, it will return a 403', async () => {
+		const handler = ApiHandler(
+			{
+				method: 'GET',
+				route: '/test',
+				schemas: {},
+				authorizer: () => {
+					throw new Error('an error!!');
+				},
+			},
+			async () => {
+				return SuccessResponse({});
+			},
+		);
+
+		const response = await handler(
+			{
+				queryStringParameters: { force: true },
+			} as any,
+			{} as any,
+			() => {},
+		);
+
+		invariant(response && typeof response !== 'string' && response.body);
+		expect(response.statusCode).toBe(403);
+	});
 });
 
 export {};

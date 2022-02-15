@@ -44,13 +44,20 @@ export interface ApiHandlerDefinition<B = never, Q = never, R = never>
 	};
 }
 
-export type ApiHandlerAuthorizer<A> = (
-	event: APIGatewayProxyEventV2,
+export type ApiHandlerAuthorizer<
+	B,
+	Q,
+	P extends ReadonlyArray<string>,
+	A,
+	R,
+> = (
+	event: ParsedApiEvent<B, Q, P>,
+	handlerOptions: ApiHandlerOptions<B, Q, A, P, R>,
 ) => A | false;
 
 export interface ApiHandlerOptions<B, Q, A, P extends ReadonlyArray<string>, R>
 	extends ApiHandlerDefinition<B, Q, R> {
-	authorizer?: ApiHandlerAuthorizer<A>;
+	authorizer?: ApiHandlerAuthorizer<B, Q, P, A, R>;
 	pathParameters?: P;
 }
 
@@ -66,6 +73,15 @@ export type ValidatedApiEvent<
 		path: ApiPathParameters<P>;
 		auth: A;
 	};
+};
+
+export type ParsedApiEvent<
+	B,
+	Q,
+	P extends ReadonlyArray<string>,
+	A = never,
+> = Omit<ValidatedApiEvent<B, Q, A, P>, 'input'> & {
+	input: Omit<ValidatedApiEvent<B, Q, A, P>['input'], 'auth'>;
 };
 
 export type ApiHandlerFunction<
@@ -123,20 +139,6 @@ export function ApiHandler<
 
 	const wrappedHandler: APIGatewayProxyHandlerV2 = async (event, context) => {
 		try {
-			let auth = undefined as unknown as A;
-			if (authorizer) {
-				try {
-					const authResult = authorizer(event);
-					if (authResult) {
-						auth = authResult;
-					} else {
-						return FailedResponse('Unauthorized', { statusCode: 403 });
-					}
-				} catch {
-					return FailedResponse('Unauthorized', { statusCode: 403 });
-				}
-			}
-
 			const validatedParameters = checkPathParameters<P>(
 				event.pathParameters,
 				pathParameters,
@@ -173,12 +175,33 @@ export function ApiHandler<
 				return FailedResponse(validateQueryResult.error, { statusCode: 400 });
 			}
 
-			const validatedEvent: ValidatedApiEvent<B, Q, A, P> = {
+			const parsedEvent: ParsedApiEvent<B, Q, P> = {
 				...event,
 				input: {
 					body: validateBodyResult.data,
 					query: validateQueryResult.data,
 					path: validatedParameters,
+				},
+			};
+
+			let auth = undefined as unknown as A;
+			if (authorizer) {
+				try {
+					const authResult = authorizer(parsedEvent, options);
+					if (authResult) {
+						auth = authResult;
+					} else {
+						return FailedResponse('Unauthorized', { statusCode: 403 });
+					}
+				} catch {
+					return FailedResponse('Unauthorized', { statusCode: 403 });
+				}
+			}
+
+			const validatedEvent: ValidatedApiEvent<B, Q, A, P> = {
+				...event,
+				input: {
+					...parsedEvent.input,
 					auth: auth,
 				},
 			};
