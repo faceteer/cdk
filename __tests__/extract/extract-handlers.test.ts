@@ -80,7 +80,6 @@ describe('Parse Handlers', () => {
 			},
 		});
 
-		console.log(handlers.cron.QueuePulls.schedule.expressionString);
 		expect(handlers.cron).toEqual({
 			QueuePulls: {
 				name: 'QueuePulls',
