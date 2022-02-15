@@ -80,6 +80,7 @@ describe('Parse Handlers', () => {
 			},
 		});
 
+		console.log(handlers.cron.QueuePulls.schedule.expressionString);
 		expect(handlers.cron).toEqual({
 			QueuePulls: {
 				name: 'QueuePulls',
@@ -95,7 +96,7 @@ describe('Parse Handlers', () => {
 				name: 'IncomingEmailSendToProcessQueue',
 				topicName: 'incoming-email',
 				memorySize: 256,
-				path: `${basePath}notificaiton/test-notification.handler.ts`,
+				path: `${basePath}notification/test-notification.handler.ts`,
 			},
 		});
 	});
