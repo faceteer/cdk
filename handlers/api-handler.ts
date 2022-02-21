@@ -36,6 +36,10 @@ export interface ApiHandlerDefinition<B = never, Q = never, R = never>
 	 * Optional overrides of the scopes for a route
 	 */
 	scopes?: string[];
+	/**
+	 * Optional override of default AJV instance
+	 */
+	validator?: Ajv;
 
 	schemas: {
 		body?: JSONSchemaType<B>;
@@ -125,16 +129,17 @@ export function ApiHandler<
 	options: ApiHandlerOptions<B, Q, A, P, R>,
 	handler: ApiHandlerFunction<B, Q, A, R, P>,
 ): ApiHandlerWithDefinition<B, Q, R> {
-	const { schemas, authorizer, pathParameters, ...definition } = options;
+	const { schemas, authorizer, pathParameters, validator, ...definition } =
+		options;
 
 	const ajvValidators: AjvValidators<B, Q> = {};
 
 	if (schemas.body) {
-		ajvValidators.body = ajv.compile(schemas.body);
+		ajvValidators.body = (validator ?? ajv).compile(schemas.body);
 	}
 
 	if (schemas.query) {
-		ajvValidators.query = ajv.compile(schemas.query);
+		ajvValidators.query = (validator ?? ajv).compile(schemas.query);
 	}
 
 	const wrappedHandler: APIGatewayProxyHandlerV2 = async (event, context) => {
