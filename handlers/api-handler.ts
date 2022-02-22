@@ -39,7 +39,7 @@ export interface ApiHandlerDefinition<B = never, Q = never, R = never>
 	/**
 	 * Optional override of default AJV instance
 	 */
-	validator?: Ajv;
+	ajv?: Ajv;
 
 	schemas: {
 		body?: JSONSchemaType<B>;
