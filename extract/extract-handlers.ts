@@ -4,6 +4,8 @@ import * as path from 'path';
 import {
 	CronHandlerDefinition,
 	CronHandlerWithDefinition,
+	EventHandlerDefinition,
+	EventHandlerWithDefinition,
 	NotificationHandlerDefinition,
 	NotificationHandlerWithDefinition,
 } from '../handlers';
@@ -28,6 +30,7 @@ export function extractHandlers(path: string) {
 	const handlers: {
 		api: Record<string, FullHandlerDefinition<ApiHandlerDefinition>>;
 		queue: Record<string, FullHandlerDefinition<QueueHandlerDefinition>>;
+		event: Record<string, FullHandlerDefinition<EventHandlerDefinition>>;
 		notification: Record<
 			string,
 			FullHandlerDefinition<NotificationHandlerDefinition>
@@ -36,6 +39,7 @@ export function extractHandlers(path: string) {
 	} = {
 		api: {},
 		queue: {},
+		event: {},
 		notification: {},
 		cron: {},
 	};
@@ -45,6 +49,7 @@ export function extractHandlers(path: string) {
 			const handler = require(file.replace(/\.ts$/g, '')).handler as
 				| ApiHandlerWithDefinition
 				| QueueHandlerWithDefinition<unknown>
+				| EventHandlerWithDefinition
 				| CronHandlerWithDefinition
 				| NotificationHandlerWithDefinition;
 			switch (handler.type) {
@@ -75,6 +80,18 @@ export function extractHandlers(path: string) {
 								path: file,
 							};
 						handlers.queue[fullDefinition.name] = fullDefinition;
+					}
+					break;
+				case HandlerTypes.Event:
+					{
+						const { definition } = handler;
+						const fullDefinition: FullHandlerDefinition<EventHandlerDefinition> =
+							{
+								...definition,
+								name: pascalCase(`Event ${definition.name}`),
+								path: file,
+							};
+						handlers.event[fullDefinition.name] = fullDefinition;
 					}
 					break;
 				case HandlerTypes.Cron:
