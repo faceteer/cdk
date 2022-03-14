@@ -129,17 +129,22 @@ export function ApiHandler<
 	options: ApiHandlerOptions<B, Q, A, P, R>,
 	handler: ApiHandlerFunction<B, Q, A, R, P>,
 ): ApiHandlerWithDefinition<B, Q, R> {
-	const { schemas, authorizer, pathParameters, validator, ...definition } =
-		options;
+	const {
+		schemas,
+		authorizer,
+		pathParameters,
+		ajv: customAjv,
+		...definition
+	} = options;
 
 	const ajvValidators: AjvValidators<B, Q> = {};
 
 	if (schemas.body) {
-		ajvValidators.body = (validator ?? ajv).compile(schemas.body);
+		ajvValidators.body = (customAjv ?? ajv).compile(schemas.body);
 	}
 
 	if (schemas.query) {
-		ajvValidators.query = (validator ?? ajv).compile(schemas.query);
+		ajvValidators.query = (customAjv ?? ajv).compile(schemas.query);
 	}
 
 	const wrappedHandler: APIGatewayProxyHandlerV2 = async (event, context) => {
