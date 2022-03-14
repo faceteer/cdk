@@ -60,7 +60,7 @@ export type EventHandlerEvent<T> = {
 	/**
 	 * Messages that have been validated
 	 */
-	ValidMessages: ValidatedMessage<T>[];
+	ValidMessages: ValidatedMessage<EventBridgeEvent<string, T>>[];
 	/**
 	 * Messages that failed to validate
 	 */
@@ -68,12 +68,9 @@ export type EventHandlerEvent<T> = {
 };
 
 export interface EventHandlerOptions<T> extends EventHandlerDefinition {
-	validator?: (messageBody: EventBridgeEvent<string, any>) => T;
-}
-
-export interface EventResults<T> {
-	Failed: { message: Message<T>; error: unknown }[];
-	Sent: Message<T>[];
+	validator?: (
+		messageBody: EventBridgeEvent<string, any>,
+	) => EventBridgeEvent<string, T>;
 }
 
 export type EventHandlerWithDefinition = SQSHandler & {
