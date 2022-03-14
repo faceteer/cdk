@@ -1,6 +1,6 @@
 import { EventPattern } from 'aws-cdk-lib/aws-events';
 import type {
-	SQSBatchItemFailure,
+	EventBridgeEvent,
 	SQSHandler,
 	SQSMessageAttribute,
 	SQSRecord,
@@ -15,22 +15,6 @@ export interface EventHandlerDefinition extends HandlerDefinition {
 	name: string;
 
 	/**
-	 * The largest number of records that AWS Lambda will retrieve
-	 * from your event source at the time of invoking your function.
-	 *
-	 * @default 10
-	 */
-	batchSize?: number;
-
-	/**
-	 * The maximum amount of time in seconds to gather records
-	 * before invoking the function.
-	 *
-	 * @default undefined
-	 */
-	maxBatchingWindow?: number;
-
-	/**
 	 * Uses event bus name that is provided and configured within stack.
 	 * If no name is specified, the first bus listed in the CDK configuration is used.
 	 */
@@ -40,6 +24,25 @@ export interface EventHandlerDefinition extends HandlerDefinition {
 	 * The event pattern in which to subscribe to.
 	 */
 	eventPattern: EventPattern;
+
+	/**
+	 * The largest number of records that AWS Lambda will retrieve from your event source at the time of invoking your function.
+	 *
+	 * Valid Range: Minimum value of 1. Maximum value of 10.
+	 * If `maxBatchingWindow` is configured, this value can go up to 10,000.
+	 *
+	 * @default 10
+	 */
+	batchSize?: number;
+
+	/**
+	 * The maximum amount of time to gather records before invoking the function.
+	 *
+	 * Valid Range: Minimum value of 0 minutes. Maximum value of 5 minutes.
+	 *
+	 * @default - no batching window. The lambda function will be invoked immediately with the records that are available.
+	 */
+	maxBatchingWindow?: number;
 
 	/**
 	 * How many times to attempt processing a message
@@ -64,12 +67,8 @@ export type EventHandlerEvent<T> = {
 	InvalidMessages: InvalidMessage[];
 };
 
-export type EventHandlerResponse<T> = {
-	retry: ValidatedMessage<T>[];
-} | void;
-
 export interface EventHandlerOptions<T> extends EventHandlerDefinition {
-	validator?: (messageBody: any) => T;
+	validator?: (messageBody: EventBridgeEvent<string, any>) => T;
 }
 
 export interface EventResults<T> {
@@ -84,7 +83,7 @@ export type EventHandlerWithDefinition = SQSHandler & {
 
 export function EventHandler<T = unknown>(
 	options: EventHandlerOptions<T>,
-	handler: AsyncHandler<EventHandlerEvent<T>, EventHandlerResponse<T>>,
+	handler: AsyncHandler<EventHandlerEvent<T>, void>,
 ): EventHandlerWithDefinition {
 	const { validator, ...definition } = options;
 
@@ -128,36 +127,9 @@ export function EventHandler<T = unknown>(
 			/**
 			 * Run the queue handler against the validated or invalid messages
 			 */
-			const handlerResponse = await handler(queueEvent, context);
-
-			console.log('handlerResponse', handlerResponse);
-
-			if (!handlerResponse || handlerResponse.retry.length === 0) {
-				return {
-					batchItemFailures: [],
-				};
-			}
-			const permanentlyFailedMessages: SQSBatchItemFailure[] = [];
-			for (const messageToRetry of handlerResponse.retry) {
-				permanentlyFailedMessages.push({
-					itemIdentifier: messageToRetry.messageId,
-				});
-			}
-
-			return {
-				batchItemFailures: permanentlyFailedMessages,
-			};
+			await handler(queueEvent, context);
 		} catch (error) {
 			console.error(error);
-			/**
-			 * If the handler fails to run we'll mark all of the events
-			 * as failed and return them
-			 */
-			return {
-				batchItemFailures: event.Records.map((record) => ({
-					itemIdentifier: record.messageId,
-				})),
-			};
 		}
 	};
 
