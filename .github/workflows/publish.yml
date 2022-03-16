@@ -1,0 +1,45 @@
+name: Publish Package
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - 'package.json'
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v2
+
+            - name: Check if version has been updated
+              id: check
+              uses: EndBug/version-check@v1
+              with:
+                  diff-search: true
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Version update detected
+              if: steps.check.outputs.changed == 'true'
+              run: 'echo "Version change found! New version: ${{ steps.check.outputs.version }} (${{ steps.check.outputs.type }})"'
+
+            - name: Setup node
+              if: steps.check.outputs.changed == 'true'
+              uses: actions/setup-node@v2
+              with:
+                  node-version: '16.x'
+                  registry-url: 'https://npm.pkg.github.com'
+                  scope: '@faceteer'
+
+            - name: Installing dependencies
+              if: steps.check.outputs.changed == 'true'
+              run: npm ci
+
+            - name: Publishing package
+              if: steps.check.outputs.changed == 'true'
+              run: npm publish
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
