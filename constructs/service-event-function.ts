@@ -15,7 +15,7 @@ export interface ServiceEventFunctionProps {
 	definition: FullHandlerDefinition<EventHandlerDefinition>;
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
 	layers?: lambda.ILayerVersion[];
-	eventBuses: events.IEventBus[];
+	eventBus: events.IEventBus;
 }
 
 export class ServiceEventFunction extends Construct {
@@ -32,7 +32,7 @@ export class ServiceEventFunction extends Construct {
 			definition,
 			bundlingOptions,
 			layers,
-			eventBuses,
+			eventBus,
 		}: ServiceEventFunctionProps,
 	) {
 		super(scope, id);
@@ -63,20 +63,6 @@ export class ServiceEventFunction extends Construct {
 				queue: this.dlq,
 			},
 		});
-
-		let eventBus = eventBuses[0];
-		if (definition.eventBusName) {
-			const matchedEventBus = eventBuses.find(
-				(bus) => bus.eventBusName === definition.eventBusName,
-			);
-			if (!matchedEventBus) {
-				throw new Error(`
-					Could not find the event bus "${definition.eventBusName}" specified event bus name. 
-					Please make sure the event handler "${definition.name}" is configured properly or that you have configured the appropriate event buses.
-				`);
-			}
-			eventBus = matchedEventBus;
-		}
 
 		const rule = new events.Rule(this, 'Rule', {
 			eventBus,

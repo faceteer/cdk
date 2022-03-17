@@ -237,11 +237,26 @@ export class LambdaService extends Construct implements iam.IGrantable {
 					'Tried to create an event handler without any configured event buses',
 				);
 			}
+
+			let eventBus = eventBuses[0];
+			if (eventHandler.eventBusName) {
+				const matchedEventBus = eventBuses.find(
+					(bus) => bus.eventBusName === eventHandler.eventBusName,
+				);
+				if (!matchedEventBus) {
+					throw new Error(`
+						Could not find the event bus "${eventHandler.eventBusName}" specified event bus name. 
+						Please make sure the event handler "${eventHandler.name}" is configured properly or that you have configured the appropriate event buses.
+					`);
+				}
+				eventBus = matchedEventBus;
+			}
+
 			const eventFn = new ServiceEventFunction(this, eventHandler.name, {
 				role: role,
 				definition: eventHandler,
 				bundlingOptions,
-				eventBuses,
+				eventBus,
 			});
 			this.functions.push(eventFn.fn);
 		}
