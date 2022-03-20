@@ -1,4 +1,4 @@
-import { EventHandler, EventHandlerEvent } from '../../handlers';
+import { EventHandler } from '../../handlers';
 import { EventBridgeEvent } from 'aws-lambda';
 
 interface AddedUserEvent {
@@ -18,14 +18,10 @@ describe('Event Handler', () => {
 	test('Handles valid messages', async () => {
 		const user = { userId: '454', token: 'xxyyyzzz' };
 
-		const internalHandler = jest.fn(
-			async (
-				event: EventHandlerEvent<string, AddedUserEvent>,
-			): Promise<void> => {
-				expect(event.detail).toEqual(user);
-				return;
-			},
-		);
+		const internalHandler = jest.fn(async (event): Promise<void> => {
+			expect(event.detail).toEqual(user);
+			return;
+		});
 
 		const handler = EventHandler(
 			{
