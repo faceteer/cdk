@@ -23,7 +23,9 @@ export interface EventHandlerDefinition extends HandlerDefinition {
 export type EventHandlerEvent<T> = EventBridgeEvent<string, T>;
 
 export interface EventHandlerOptions<T> extends EventHandlerDefinition {
-	validator: (detail: any) => T;
+	validator: (
+		detail: EventBridgeEvent<string, T>,
+	) => EventBridgeEvent<string, T>;
 }
 
 export type EventHandlerWithDefinition<T> = EventBridgeHandler<
@@ -46,20 +48,15 @@ export function EventHandler<T = unknown>(
 		context,
 	) => {
 		try {
-			const validDetail = validator(event.detail);
+			const validDetail = validator(event);
 			if (!validDetail) {
 				throw new Error('Invalid event detail');
 			}
-			event.detail = validDetail;
+
+			await handler(validDetail, context);
 		} catch (error) {
 			console.error(error);
 			return;
-		}
-
-		try {
-			await handler(event, context);
-		} catch (error) {
-			console.error(error);
 		}
 	};
 

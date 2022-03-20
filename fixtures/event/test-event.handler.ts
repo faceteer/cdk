@@ -1,3 +1,4 @@
+import { EventBridgeEvent } from 'aws-lambda';
 import { EventHandler } from '../../handlers';
 
 interface User {
@@ -14,7 +15,7 @@ export const handler = EventHandler(
 		memorySize: 1024,
 		timeout: 900,
 		validator: (body) => {
-			return body as User;
+			return body as EventBridgeEvent<string, User>;
 		},
 	},
 	async (event) => {

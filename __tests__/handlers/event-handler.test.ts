@@ -30,7 +30,7 @@ describe('Event Handler', () => {
 				name: 'test-event',
 				eventPattern: { detailType: ['test'] },
 				validator: (body) => {
-					return body as AddedUserEvent;
+					return body as EventBridgeEvent<string, AddedUserEvent>;
 				},
 			},
 			internalHandler,
@@ -58,7 +58,7 @@ describe('Event Handler', () => {
 				},
 				validator: (detail) => {
 					if ('userId' in detail && 'token' in detail) {
-						return detail as AddedUserEvent;
+						return detail as EventBridgeEvent<string, AddedUserEvent>;
 					}
 					throw new Error('Validation failed');
 				},
