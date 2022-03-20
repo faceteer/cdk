@@ -24,7 +24,9 @@ export type EventHandlerEvent<T extends string, D> = EventBridgeEvent<T, D>;
 
 export interface EventHandlerOptions<T extends string, D>
 	extends EventHandlerDefinition {
-	validator: (detail: EventBridgeEvent<string, any>) => EventBridgeEvent<T, D>;
+	validator: (
+		detail: EventBridgeEvent<T, any>,
+	) => EventBridgeEvent<T, D> | void;
 }
 
 export type EventHandlerWithDefinition<
