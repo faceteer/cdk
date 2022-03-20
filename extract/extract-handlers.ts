@@ -49,7 +49,7 @@ export function extractHandlers(path: string) {
 			const handler = require(file.replace(/\.ts$/g, '')).handler as
 				| ApiHandlerWithDefinition
 				| QueueHandlerWithDefinition<unknown>
-				| EventHandlerWithDefinition
+				| EventHandlerWithDefinition<unknown>
 				| CronHandlerWithDefinition
 				| NotificationHandlerWithDefinition;
 			switch (handler.type) {
