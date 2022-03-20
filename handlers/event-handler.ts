@@ -20,30 +20,28 @@ export interface EventHandlerDefinition extends HandlerDefinition {
 	eventPattern: EventPattern;
 }
 
-export type EventHandlerEvent<T> = EventBridgeEvent<string, T>;
+export type EventHandlerEvent<T extends string, D> = EventBridgeEvent<T, D>;
 
-export interface EventHandlerOptions<T> extends EventHandlerDefinition {
-	validator: (
-		detail: EventBridgeEvent<string, T>,
-	) => EventBridgeEvent<string, T>;
+export interface EventHandlerOptions<T extends string, D>
+	extends EventHandlerDefinition {
+	validator: (detail: EventBridgeEvent<string, any>) => EventBridgeEvent<T, D>;
 }
 
-export type EventHandlerWithDefinition<T> = EventBridgeHandler<
-	string,
-	T,
-	void
-> & {
+export type EventHandlerWithDefinition<
+	T extends string,
+	D,
+> = EventBridgeHandler<T, D, void> & {
 	type: HandlerTypes.Event;
 	definition: EventHandlerDefinition;
 };
 
-export function EventHandler<T = unknown>(
-	options: EventHandlerOptions<T>,
-	handler: AsyncHandler<EventHandlerEvent<T>, void>,
-): EventHandlerWithDefinition<T> {
+export function EventHandler<T extends string, D = unknown>(
+	options: EventHandlerOptions<T, D>,
+	handler: AsyncHandler<EventHandlerEvent<T, D>, void>,
+): EventHandlerWithDefinition<T, D> {
 	const { validator, ...definition } = options;
 
-	const wrappedHandler: EventBridgeHandler<string, T, void> = async (
+	const wrappedHandler: EventBridgeHandler<T, D, void> = async (
 		event,
 		context,
 	) => {

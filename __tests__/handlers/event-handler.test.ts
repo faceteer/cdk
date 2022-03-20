@@ -19,7 +19,9 @@ describe('Event Handler', () => {
 		const user = { userId: '454', token: 'xxyyyzzz' };
 
 		const internalHandler = jest.fn(
-			async (event: EventHandlerEvent<AddedUserEvent>): Promise<void> => {
+			async (
+				event: EventHandlerEvent<string, AddedUserEvent>,
+			): Promise<void> => {
 				expect(event.detail).toEqual(user);
 				return;
 			},
