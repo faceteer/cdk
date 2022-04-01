@@ -44,13 +44,13 @@ export interface ApiHandlerDefinition<B = never, Q = never, R = never>
 	ajv?: Ajv;
 
 	/** @deprecated Use `validators` instead */
-	schemas: {
+	schemas?: {
 		body?: JSONSchemaType<B>;
 		query?: JSONSchemaType<Q>;
 		response?: JSONSchemaType<R>;
 	};
 
-	validators: {
+	validators?: {
 		body?: (body: any) => B;
 		query?: (query: any) => Q;
 		response?: (response: any) => R;
@@ -149,11 +149,11 @@ export function ApiHandler<
 
 	const ajvValidators: AjvValidators<B, Q> = {};
 
-	if (schemas.body) {
+	if (schemas && schemas.body) {
 		ajvValidators.body = (customAjv ?? ajv).compile(schemas.body);
 	}
 
-	if (schemas.query) {
+	if (schemas && schemas.query) {
 		ajvValidators.query = (customAjv ?? ajv).compile(schemas.query);
 	}
 
