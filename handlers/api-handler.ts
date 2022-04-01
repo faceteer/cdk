@@ -1,4 +1,4 @@
-import Ajv, { ErrorObject, JSONSchemaType, ValidateFunction } from 'ajv';
+import Ajv, { JSONSchemaType, ValidateFunction } from 'ajv';
 import type {
 	APIGatewayProxyEventPathParameters,
 	APIGatewayProxyEventV2,
@@ -38,13 +38,22 @@ export interface ApiHandlerDefinition<B = never, Q = never, R = never>
 	scopes?: string[];
 	/**
 	 * Optional override of default AJV instance
+	 *
+	 * @deprecated Use your own AJV instance in `validators`
 	 */
 	ajv?: Ajv;
 
+	/** @deprecated Use `validators` instead */
 	schemas: {
 		body?: JSONSchemaType<B>;
 		query?: JSONSchemaType<Q>;
 		response?: JSONSchemaType<R>;
+	};
+
+	validators: {
+		body?: (body: any) => B;
+		query?: (query: any) => Q;
+		response?: (response: any) => R;
 	};
 }
 
@@ -134,6 +143,7 @@ export function ApiHandler<
 		authorizer,
 		pathParameters,
 		ajv: customAjv,
+		validators,
 		...definition
 	} = options;
 
@@ -169,18 +179,31 @@ export function ApiHandler<
 				}
 			}
 
-			const validateBodyResult = validateInput(
-				ajvValidators.body,
-				event.body ?? {},
-			);
+			let validateBodyResult: ValidationResult<B> = {
+				success: true,
+				data: event.body as unknown as B,
+			};
+			let validateQueryResult: ValidationResult<Q> = {
+				success: true,
+				data: queryBody as Q,
+			};
+			if (validators) {
+				validateBodyResult = validateInput(validators.body, event.body);
+				validateQueryResult = validateInput(validators.query, queryBody);
+			} else if (ajvValidators) {
+				validateBodyResult = validateDeprecatedInput(
+					ajvValidators.body,
+					event.body,
+				);
+				validateQueryResult = validateDeprecatedInput(
+					ajvValidators.query,
+					queryBody,
+				);
+			}
+
 			if (!validateBodyResult.success) {
 				return FailedResponse(validateBodyResult.error, { statusCode: 400 });
 			}
-
-			const validateQueryResult = validateInput(
-				ajvValidators.query,
-				queryBody ?? {},
-			);
 			if (!validateQueryResult.success) {
 				return FailedResponse(validateQueryResult.error, { statusCode: 400 });
 			}
@@ -239,10 +262,46 @@ export function ApiHandler<
 	return Object.assign(wrappedHandler, {
 		definition: {
 			...definition,
+			validators,
 			schemas,
 		},
 		type: HandlerTypes.API as const,
 	});
+}
+
+type ValidationResult<T> =
+	| { success: false; error: unknown }
+	| { success: true; data: T };
+
+/**
+ * Validate the input for our query or our body
+ * @param validator
+ * @param input
+ * @returns
+ */
+function validateInput<T>(
+	validator?: (value: any) => T,
+	input?: string | unknown,
+): ValidationResult<T> {
+	if (!validator) {
+		return { success: true, data: input as T };
+	}
+	/**
+	 * Assume any string inputs are JSON
+	 */
+	if (typeof input === 'string') {
+		input = JSON.parse(input);
+	}
+
+	try {
+		const validatedInput = validator(input);
+		if (validatedInput) {
+			return { success: true, data: validatedInput };
+		}
+		return { success: false, error: new Error('Input validation failed') };
+	} catch (error) {
+		return { success: false, error };
+	}
 }
 
 /**
@@ -250,13 +309,12 @@ export function ApiHandler<
  * @param validator
  * @param input
  * @returns
+ * @deprecated
  */
-function validateInput<T>(
+function validateDeprecatedInput<T>(
 	validator?: ValidateFunction<T>,
 	input?: string | unknown,
-):
-	| { success: false; error: ErrorObject<string, Record<string, any>, unknown> }
-	| { success: true; data: T } {
+): ValidationResult<T> {
 	if (!validator) {
 		return { success: true, data: input as unknown as T };
 	}
