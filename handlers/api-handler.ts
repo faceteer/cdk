@@ -298,9 +298,12 @@ function validateInput<T>(
 		if (validatedInput) {
 			return { success: true, data: validatedInput };
 		}
-		return { success: false, error: new Error('Input validation failed') };
+		throw new Error('Input validation failed');
 	} catch (error) {
-		return { success: false, error };
+		return {
+			success: false,
+			error: error instanceof Error ? { message: error.message } : error,
+		};
 	}
 }
 
