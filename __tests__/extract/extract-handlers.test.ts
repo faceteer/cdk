@@ -1,11 +1,17 @@
 import * as path from 'path';
 import { extractHandlers } from '../../extract/extract-handlers';
 
+jest.spyOn(global.console, 'error');
+
 describe('Parse Handlers', () => {
 	test('Handlers are parsed', () => {
 		const handlers = extractHandlers(path.join(__dirname, '../../fixtures/'));
 
 		const basePath = path.join(__dirname, '../../fixtures/');
+
+		expect(console.error).toBeCalledWith(
+			`Failed to parse handler: ${basePath}api/test-bad.handler.ts`,
+		);
 
 		expect(handlers.api).toEqual({
 			'GET-users-{userId}': {
@@ -15,6 +21,7 @@ describe('Parse Handlers', () => {
 				memorySize: 512,
 				name: 'GET-users-{userId}',
 				path: `${basePath}api/test-get.handler.ts`,
+				validators: undefined,
 				schemas: {
 					body: {
 						type: 'object',
@@ -39,31 +46,10 @@ describe('Parse Handlers', () => {
 				timeout: 900,
 				name: 'POST-users',
 				path: `${basePath}api/test-post.handler.ts`,
-				schemas: {
-					body: {
-						type: 'object',
-						properties: {
-							userId: {
-								type: 'string',
-							},
-							email: {
-								type: 'string',
-							},
-						},
-						required: ['email', 'userId'],
-					},
-					response: {
-						type: 'object',
-						properties: {
-							userId: {
-								type: 'string',
-							},
-							email: {
-								type: 'string',
-							},
-						},
-						required: ['email', 'userId'],
-					},
+				schemas: undefined,
+				validators: {
+					body: expect.any(Function),
+					response: expect.any(Function),
 				},
 			},
 		});
