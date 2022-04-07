@@ -51,9 +51,9 @@ export interface ApiHandlerDefinition<B = never, Q = never, R = never>
 	};
 
 	validators?: {
-		body?: (body: any) => B;
-		query?: (query: any) => Q;
-		response?: (response: any) => R;
+		body?: (body: unknown) => B;
+		query?: (query: unknown) => Q;
+		response?: (response: unknown) => R;
 	};
 }
 
