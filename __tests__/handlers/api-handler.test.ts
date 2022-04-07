@@ -372,8 +372,8 @@ describe('Api Handler', () => {
 				validators: {
 					body: (body) => {
 						if (
+							body &&
 							typeof body === 'object' &&
-							body !== null &&
 							'name' in body &&
 							'id' in body
 						) {
