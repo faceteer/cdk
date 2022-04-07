@@ -371,7 +371,12 @@ describe('Api Handler', () => {
 				route: '/users/{userId}',
 				validators: {
 					body: (body) => {
-						if ('name' in body && 'id' in body) {
+						if (
+							typeof body === 'object' &&
+							body !== null &&
+							'name' in body &&
+							'id' in body
+						) {
 							return body as User;
 						} else {
 							throw new Error('Missing an attribute!');
