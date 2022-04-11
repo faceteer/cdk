@@ -42,6 +42,13 @@ export interface ApiHandlerDefinition<B = never, Q = never, R = never>
 	 * @deprecated Use your own AJV instance in `validators`
 	 */
 	ajv?: Ajv;
+	/**
+	 * The amount of time that Lambda allows a function to run before stopping it.
+	 * The default is 3 seconds. The maximum allowed value is 30 seconds.
+	 *
+	 * Consider using a `QueueHandler` for a timeout larger than 30 seconds.
+	 */
+	timeout?: number;
 
 	/** @deprecated Use `validators` instead */
 	schemas?: {
