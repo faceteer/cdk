@@ -62,7 +62,9 @@ export class ServiceCronFunction extends Construct {
 		 * Add the scheduled event for this cron job.
 		 */
 		const rule = new events.Rule(this, `${definition.name}Rule`, {
-			schedule: definition.schedule,
+			schedule: events.Schedule.expression(
+				definition.schedule.expressionString,
+			),
 		});
 		rule.addTarget(new eventsTargets.LambdaFunction(this.fn));
 	}
