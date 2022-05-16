@@ -1,0 +1,24 @@
+import { BritaBrowser, BritaServer } from '@fokal-art/brita';
+import { makeRequest } from './helpers/make-request';
+<% for (const arg of functions) { -%>
+import { <%= arg %> } from './requests/<%= arg %>';
+<% } %>
+
+export type <%= name %>Options = {
+	brita: BritaBrowser | BritaServer;
+	maxRetryAttempts?: number;
+};
+
+export class <%= name %> {
+	protected options: Required<<%= name %>Options>;
+
+	constructor({ brita, maxRetryAttempts = 4 }: <%= name %>Options) {
+		this.options = { brita, maxRetryAttempts };
+	}
+
+	<%_ for (const arg of functions) { -%>
+	public <%= arg %> = <%= arg %>;
+	<%_ } -%>
+
+	protected makeRequest = makeRequest;
+}

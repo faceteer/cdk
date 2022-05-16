@@ -18,6 +18,7 @@ const UserSchema: JSONSchemaType<User> = {
 
 export const handler = ApiHandler(
 	{
+		name: 'getUser',
 		method: 'GET',
 		route: '/users/{userId}',
 		description: 'Get a user',

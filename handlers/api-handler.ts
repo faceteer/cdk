@@ -21,6 +21,8 @@ export type ApiPathParameters<T extends ReadonlyArray<string>> = Record<
 
 export interface ApiHandlerDefinition<B = never, Q = never, R = never>
 	extends HandlerDefinition {
+	name: string;
+
 	/** HTTP method for which this function is invoked. */
 	method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 	/**

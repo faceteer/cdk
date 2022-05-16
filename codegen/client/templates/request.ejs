@@ -1,0 +1,18 @@
+import { <%= name %> } from '../<%= name %>';
+import { <%= name %>Response } from '../types/base-response';
+
+export type <%= requestName %> = <%= requestType %>;
+export type <%= responseName %> = <%= responseType %>;
+
+export async function <%= functionName %>(
+	this: <%= name %>,
+	request: <%= requestName %>,
+): Promise<LeoResponse<<%= responseName %>>> {
+	const { userId, ...data } = request;
+	return this.makeRequest<<%= responseName %>>({
+		method: '<%= method %>',
+		url: '<%= route %>',
+		data,
+		params: { userId },
+	});
+}
