@@ -45,21 +45,49 @@ export interface ApiHandlerDefinition<
 	 * contain `{parameter-name}`, ex: /users/{userId}
 	 */
 	pathParameters?: P;
+	/**
+	 * Optional override of default AJV instance
+	 *
+	 * @deprecated Use your own AJV instance in `validators`
+	 */
+	ajv?: Ajv;
+	/**
+	 * The amount of time that Lambda allows a function to run before stopping it.
+	 * The default is 3 seconds. The maximum allowed value is 30 seconds.
+	 *
+	 * Consider using a `QueueHandler` for a timeout larger than 30 seconds.
+	 */
+	timeout?: number;
 
-	schemas: {
+	/** @deprecated Use `validators` instead */
+	schemas?: {
 		body?: JSONSchemaType<B>;
 		query?: JSONSchemaType<Q>;
 		response?: JSONSchemaType<R>;
 	};
+
+	validators?: {
+		body?: (body: unknown) => B;
+		query?: (query: unknown) => Q;
+		response?: (response: unknown) => R;
+	};
 }
 
-export type ApiHandlerAuthorizer<A> = (
-	event: APIGatewayProxyEventV2,
+export type ApiHandlerAuthorizer<
+	B,
+	Q,
+	P extends ReadonlyArray<string>,
+	A,
+	R,
+> = (
+	event: ParsedApiEvent<B, Q, P>,
+	handlerOptions: ApiHandlerOptions<B, Q, A, P, R>,
 ) => A | false;
 
 export interface ApiHandlerOptions<B, Q, A, P extends ReadonlyArray<string>, R>
-	extends ApiHandlerDefinition<B, Q, R, P> {
-	authorizer?: ApiHandlerAuthorizer<A>;
+	extends ApiHandlerDefinition<B, Q, R> {
+	authorizer?: ApiHandlerAuthorizer<B, Q, P, A, R>;
+	pathParameters: P;
 }
 
 export type ValidatedApiEvent<
@@ -74,6 +102,15 @@ export type ValidatedApiEvent<
 		path: ApiPathParameters<P>;
 		auth: A;
 	};
+};
+
+export type ParsedApiEvent<
+	B,
+	Q,
+	P extends ReadonlyArray<string>,
+	A = never,
+> = Omit<ValidatedApiEvent<B, Q, A, P>, 'input'> & {
+	input: Omit<ValidatedApiEvent<B, Q, A, P>['input'], 'auth'>;
 };
 
 export type ApiHandlerFunction<
@@ -117,34 +154,26 @@ export function ApiHandler<
 	options: ApiHandlerOptions<B, Q, A, P, R>,
 	handler: ApiHandlerFunction<B, Q, A, R, P>,
 ): ApiHandlerWithDefinition<B, Q, R> {
-	const { schemas, authorizer, ...definition } = options;
+	const {
+		schemas,
+		authorizer,
+		ajv: customAjv,
+		validators,
+		...definition
+	} = options;
 
 	const ajvValidators: AjvValidators<B, Q> = {};
 
-	if (schemas.body) {
-		ajvValidators.body = ajv.compile(schemas.body);
+	if (schemas && schemas.body) {
+		ajvValidators.body = (customAjv ?? ajv).compile(schemas.body);
 	}
 
-	if (schemas.query) {
-		ajvValidators.query = ajv.compile(schemas.query);
+	if (schemas && schemas.query) {
+		ajvValidators.query = (customAjv ?? ajv).compile(schemas.query);
 	}
 
 	const wrappedHandler: APIGatewayProxyHandlerV2 = async (event, context) => {
 		try {
-			let auth = undefined as unknown as A;
-			if (authorizer) {
-				try {
-					const authResult = authorizer(event);
-					if (authResult) {
-						auth = authResult;
-					} else {
-						return FailedResponse('Unauthorized', { statusCode: 403 });
-					}
-				} catch {
-					return FailedResponse('Unauthorized', { statusCode: 403 });
-				}
-			}
-
 			const validatedParameters = checkPathParameters<P>(
 				event.pathParameters,
 				definition.pathParameters,
@@ -165,18 +194,62 @@ export function ApiHandler<
 				}
 			}
 
-			const validatedBody = validateInput(ajvValidators.body, event.body ?? {});
-			const validatedQuery = validateInput(
-				ajvValidators.query,
-				queryBody ?? {},
-			);
+			let validateBodyResult: ValidationResult<B> = {
+				success: true,
+				data: event.body as unknown as B,
+			};
+			let validateQueryResult: ValidationResult<Q> = {
+				success: true,
+				data: queryBody as Q,
+			};
+			if (validators) {
+				validateBodyResult = validateInput(validators.body, event.body);
+				validateQueryResult = validateInput(validators.query, queryBody);
+			} else if (ajvValidators) {
+				validateBodyResult = validateDeprecatedInput(
+					ajvValidators.body,
+					event.body,
+				);
+				validateQueryResult = validateDeprecatedInput(
+					ajvValidators.query,
+					queryBody,
+				);
+			}
+
+			if (!validateBodyResult.success) {
+				return FailedResponse(validateBodyResult.error, { statusCode: 400 });
+			}
+			if (!validateQueryResult.success) {
+				return FailedResponse(validateQueryResult.error, { statusCode: 400 });
+			}
+
+			const parsedEvent: ParsedApiEvent<B, Q, P> = {
+				...event,
+				input: {
+					body: validateBodyResult.data,
+					query: validateQueryResult.data,
+					path: validatedParameters,
+				},
+			};
+
+			let auth = undefined as unknown as A;
+			if (authorizer) {
+				try {
+					const authResult = authorizer(parsedEvent, options);
+					if (authResult) {
+						auth = authResult;
+					} else {
+						return FailedResponse('Unauthorized', { statusCode: 403 });
+					}
+				} catch {
+					return FailedResponse('Unauthorized', { statusCode: 403 });
+				}
+			}
 
 			const validatedEvent: ValidatedApiEvent<B, Q, A, P> = {
 				...event,
 				input: {
-					body: validatedBody,
-					query: validatedQuery,
-					path: validatedParameters,
+					...parsedEvent.input,
 					auth: auth,
 				},
 			};
@@ -204,10 +277,49 @@ export function ApiHandler<
 	return Object.assign(wrappedHandler, {
 		definition: {
 			...definition,
+			validators,
 			schemas,
 		},
 		type: HandlerTypes.API as const,
 	});
+}
+
+type ValidationResult<T> =
+	| { success: false; error: unknown }
+	| { success: true; data: T };
+
+/**
+ * Validate the input for our query or our body
+ * @param validator
+ * @param input
+ * @returns
+ */
+function validateInput<T>(
+	validator?: (value: any) => T,
+	input?: string | unknown,
+): ValidationResult<T> {
+	if (!validator) {
+		return { success: true, data: input as T };
+	}
+	/**
+	 * Assume any string inputs are JSON
+	 */
+	if (typeof input === 'string') {
+		input = JSON.parse(input);
+	}
+
+	try {
+		const validatedInput = validator(input);
+		if (validatedInput) {
+			return { success: true, data: validatedInput };
+		}
+		throw new Error('Input validation failed');
+	} catch (error) {
+		return {
+			success: false,
+			error: error instanceof Error ? { message: error.message } : error,
+		};
+	}
 }
 
 /**
@@ -215,13 +327,14 @@ export function ApiHandler<
  * @param validator
  * @param input
  * @returns
+ * @deprecated
  */
-function validateInput<T>(
+function validateDeprecatedInput<T>(
 	validator?: ValidateFunction<T>,
 	input?: string | unknown,
-): T {
+): ValidationResult<T> {
 	if (!validator) {
-		return input as unknown as T;
+		return { success: true, data: input as unknown as T };
 	}
 	/**
 	 * Assume any string inputs are JSON
@@ -231,13 +344,13 @@ function validateInput<T>(
 	}
 
 	if (validator(input)) {
-		return input;
+		return { success: true, data: input };
 	}
 	const [validationError] = validator.errors ?? [];
-	throw (
-		validationError ??
-		new Error('Unknown error running AJV validator for input')
-	);
+	if (validationError) {
+		return { success: false, error: validationError };
+	}
+	throw new Error('Unknown error running AJV validator for input');
 }
 
 /**

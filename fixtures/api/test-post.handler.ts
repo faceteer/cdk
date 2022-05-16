@@ -1,4 +1,3 @@
-import type { JSONSchemaType } from 'ajv';
 import { ApiHandler } from '../../handlers/api-handler';
 import { SuccessResponse } from '../../response/success-response';
 
@@ -6,15 +5,6 @@ interface User {
 	userId: string;
 	email: string;
 }
-
-const UserSchema: JSONSchemaType<User> = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string' },
-		email: { type: 'string' },
-	},
-	required: ['email', 'userId'],
-};
 
 export const handler = ApiHandler(
 	{
@@ -24,9 +14,9 @@ export const handler = ApiHandler(
 		memorySize: 256,
 		disableAuth: true,
 		timeout: 900,
-		schemas: {
-			body: UserSchema,
-			response: UserSchema,
+		validators: {
+			body: (body) => body as User,
+			response: (response) => response as User,
 		},
 	},
 	async (event) => {

@@ -20,21 +20,30 @@ export interface QueueHandlerDefinition extends HandlerDefinition {
 	 * A name for the queue.
 	 */
 	queueName: string;
+
 	/**
-	 * The largest number of records that AWS Lambda will retrieve
-	 * from your event source at the time of invoking your function.
+	 * The largest number of records that AWS Lambda will retrieve from your event source at the time of invoking your function.
+	 *
+	 * Valid Range: Minimum value of 1. Maximum value of 10.
+	 * If `maxBatchingWindow` is configured, this value can go up to 10,000.
+	 *
+	 * @default 10
 	 */
 	batchSize?: number;
+
 	/**
-	 * The maximum amount of time in seconds  to gather records
-	 * before invoking the function.
+	 * The maximum amount of time to gather records before invoking the function.
+	 *
+	 * Valid Range: Minimum value of 0 minutes. Maximum value of 5 minutes.
+	 *
+	 * @default - no batching window. The lambda function will be invoked immediately with the records that are available.
 	 */
 	maxBatchingWindow?: number;
 
 	/**
 	 * How many times to attempt processing a message
 	 *
-	 * Default is 10
+	 * @default 10
 	 */
 	maximumAttempts?: number;
 }
@@ -82,7 +91,7 @@ export type QueueHandlerWithDefinition<T> = SQSHandler & {
 	sendMessages: (messages: Message<T>[]) => Promise<QueueResults<T>>;
 };
 
-export interface sendMessagesOptions<T> {
+export interface SendMessagesOptions<T> {
 	/**
 	 * How many parallel requests to
 	 * make to SQS at a time
@@ -107,6 +116,7 @@ export interface sendMessagesOptions<T> {
  */
 export type QueueSender<T> = (
 	messages: Message<T>[],
+	options?: SendMessagesOptions<T>,
 ) => Promise<QueueResults<T>>;
 
 /**
@@ -190,8 +200,8 @@ export class QueueManager {
 		sqs: SQSClient,
 		queueName: string,
 	): QueueSender<T> {
-		return (messages) => {
-			return this.send<T>(sqs, queueName, messages);
+		return (messages, options) => {
+			return this.send<T>(sqs, queueName, messages, options);
 		};
 	}
 
@@ -214,7 +224,7 @@ export class QueueManager {
 			concurrentRequestLimit = 2,
 			uniqueKey,
 			randomDelay,
-		}: sendMessagesOptions<T> = {},
+		}: SendMessagesOptions<T> = {},
 	): Promise<QueueResults<T>> {
 		const uris = this.getUris(queueName);
 		const queueResults: QueueResults<T> = {

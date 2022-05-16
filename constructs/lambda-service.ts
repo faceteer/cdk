@@ -13,6 +13,7 @@ import { extractHandlers } from '../extract/extract-handlers';
 import { ServiceApiFunction } from './service-api-function';
 import { ServiceNotificationFunction } from './service-notification-function';
 import { ServiceQueueFunction } from './service-queue-function';
+import { ServiceCronFunction } from './service-cron-function';
 
 export interface LambdaServiceProps {
 	handlersFolder: string;
@@ -269,6 +270,19 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			);
 
 			this.functions.push(notificationFn.fn);
+		}
+
+		for (const cronHandler of Object.values(handlers.cron)) {
+			/**
+			 * Create cron handlers
+			 */
+			const cronFn = new ServiceCronFunction(this, cronHandler.name, {
+				definition: cronHandler,
+				role: role,
+				bundlingOptions,
+			});
+
+			this.functions.push(cronFn.fn);
 		}
 
 		/**

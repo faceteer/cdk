@@ -48,6 +48,9 @@ jobs:
           AWS_DEFAULT_REGION: "us-east-1"
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+      - name: Build
+        run: npm run build
+
       - name: Publish Unit Test Results
         uses: EnricoMi/publish-unit-test-result-action@v1
         if: always()
