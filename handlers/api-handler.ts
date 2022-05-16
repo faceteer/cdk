@@ -87,7 +87,7 @@ export type ApiHandlerAuthorizer<
 export interface ApiHandlerOptions<B, Q, A, P extends ReadonlyArray<string>, R>
 	extends ApiHandlerDefinition<B, Q, R> {
 	authorizer?: ApiHandlerAuthorizer<B, Q, P, A, R>;
-	pathParameters: P;
+	pathParameters?: P;
 }
 
 export type ValidatedApiEvent<
