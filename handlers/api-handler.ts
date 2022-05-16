@@ -19,10 +19,13 @@ export type ApiPathParameters<T extends ReadonlyArray<string>> = Record<
 	string
 >;
 
-export interface ApiHandlerDefinition<B = never, Q = never, R = never>
-	extends HandlerDefinition {
+export interface ApiHandlerDefinition<
+	B = never,
+	Q = never,
+	R = never,
+	P extends ReadonlyArray<string> = ReadonlyArray<string>,
+> extends HandlerDefinition {
 	name: string;
-
 	/** HTTP method for which this function is invoked. */
 	method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 	/**
@@ -38,6 +41,11 @@ export interface ApiHandlerDefinition<B = never, Q = never, R = never>
 	 * Optional overrides of the scopes for a route
 	 */
 	scopes?: string[];
+	/**
+	 * Parameters within the route. If specified, the route must
+	 * contain `{parameter-name}`, ex: /users/{userId}
+	 */
+	pathParameters?: P;
 	/**
 	 * Optional override of default AJV instance
 	 *
@@ -150,7 +158,6 @@ export function ApiHandler<
 	const {
 		schemas,
 		authorizer,
-		pathParameters,
 		ajv: customAjv,
 		validators,
 		...definition
@@ -170,7 +177,7 @@ export function ApiHandler<
 		try {
 			const validatedParameters = checkPathParameters<P>(
 				event.pathParameters,
-				pathParameters,
+				definition.pathParameters,
 			);
 
 			if (typeof validatedParameters === 'string') {

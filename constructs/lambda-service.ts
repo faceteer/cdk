@@ -192,6 +192,22 @@ export class LambdaService extends Construct implements iam.IGrantable {
 		 */
 		for (const apiHandler of Object.values(handlers.api)) {
 			/**
+			 * Validate that `pathParameters` and `route` are consistent
+			 */
+			const regex = /\{[a-zA-Z_$0-9]+\}/g;
+			const pathParameters = [...(apiHandler.pathParameters ?? [])];
+			const routeParameters =
+				apiHandler.route
+					.match(regex)
+					?.map((param) => param.substring(1, param.length - 1)) ?? [];
+			pathParameters.sort();
+			routeParameters.sort();
+			if (JSON.stringify(pathParameters) !== JSON.stringify(routeParameters)) {
+				throw new Error(
+					`The Api Handler definition in "${apiHandler.path}" does not have properly configured path parameters`,
+				);
+			}
+			/**
 			 * Add a new function to the API
 			 */
 			const apiFn = new ServiceApiFunction(this, apiHandler.name, {

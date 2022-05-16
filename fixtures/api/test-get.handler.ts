@@ -26,6 +26,7 @@ export const handler = ApiHandler(
 		schemas: {
 			body: UserSchema,
 		},
+		pathParameters: ['userId'],
 	},
 	async (event) => {
 		console.log(event);
