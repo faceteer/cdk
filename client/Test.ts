@@ -1,18 +1,18 @@
-import { BritaBrowser, BritaServer } from '@fokal-art/brita';
+import { Gandalf } from '@tailwind/gandalf';
 import { makeRequest } from './helpers/make-request';
 import { getUser } from './requests/getUser';
 import { createUser } from './requests/createUser';
 
 export type TestOptions = {
-	brita: BritaBrowser | BritaServer;
+	gandalf: Gandalf;
 	maxRetryAttempts?: number;
 };
 
 export class Test {
 	protected options: Required<TestOptions>;
 
-	constructor({ brita, maxRetryAttempts = 4 }: TestOptions) {
-		this.options = { brita, maxRetryAttempts };
+	constructor({ gandalf, maxRetryAttempts = 4 }: TestOptions) {
+		this.options = { gandalf, maxRetryAttempts };
 	}
 
 	public getUser = getUser;

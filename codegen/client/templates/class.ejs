@@ -1,19 +1,19 @@
-import { BritaBrowser, BritaServer } from '@fokal-art/brita';
+import { Gandalf } from '@tailwind/gandalf';
 import { makeRequest } from './helpers/make-request';
 <% for (const arg of functionNames) { -%>
 import { <%= arg %> } from './requests/<%= arg %>';
 <% } -%>
 
 export type <%= serviceName %>Options = {
-	brita: BritaBrowser | BritaServer;
+	gandalf: Gandalf;
 	maxRetryAttempts?: number;
 };
 
 export class <%= serviceName %> {
 	protected options: Required<<%= serviceName %>Options>;
 
-	constructor({ brita, maxRetryAttempts = 4 }: <%= serviceName %>Options) {
-		this.options = { brita, maxRetryAttempts };
+	constructor({ gandalf, maxRetryAttempts = 4 }: <%= serviceName %>Options) {
+		this.options = { gandalf, maxRetryAttempts };
 	}
 
 	<%_ for (const arg of functionNames) { -%>
