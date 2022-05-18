@@ -54,6 +54,7 @@ export function extractHandlers(path: string) {
 						const fullDefinition: FullHandlerDefinition<ApiHandlerDefinition> =
 							{
 								...definition,
+								name: pascalCase(`Api ${definition.name}`),
 								path: file,
 							};
 

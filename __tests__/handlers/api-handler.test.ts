@@ -43,6 +43,7 @@ describe('Api Handler', () => {
 
 		const handler = ApiHandler(
 			{
+				name: 'putUser',
 				method: 'PUT',
 				route: '/users/{userId}',
 				schemas: {
@@ -94,6 +95,7 @@ describe('Api Handler', () => {
 
 		const handler = ApiHandler(
 			{
+				name: 'putUser',
 				method: 'PUT',
 				route: '/users/{userId}',
 				validators: {
@@ -155,6 +157,7 @@ describe('Api Handler', () => {
 	test('Api Handler with Schemas Handles Invalid Requests', async () => {
 		const handler = ApiHandler(
 			{
+				name: 'putUser',
 				method: 'PUT',
 				route: '/users/{userId}',
 				schemas: {
@@ -200,6 +203,7 @@ describe('Api Handler', () => {
 	test('Api Handler with Validators Handles Invalid Requests', async () => {
 		const handler = ApiHandler(
 			{
+				name: 'putUser',
 				method: 'PUT',
 				route: '/users/{userId}',
 				validators: {
@@ -254,6 +258,7 @@ describe('Api Handler', () => {
 	test('Api Handler Without Validator Works', async () => {
 		const handler = ApiHandler(
 			{
+				name: 'putUser',
 				method: 'PUT',
 				route: '/users/{userId}',
 				schemas: {
@@ -292,6 +297,7 @@ describe('Api Handler', () => {
 		};
 		const handler = ApiHandler(
 			{
+				name: 'putUser',
 				method: 'PUT',
 				route: '/users/{userId}',
 				schemas: {
@@ -332,6 +338,7 @@ describe('Api Handler', () => {
 	test('Returns a 400 on schema validation failures', async () => {
 		const handler = ApiHandler(
 			{
+				name: 'putUser',
 				method: 'PUT',
 				route: '/users/{userId}',
 				schemas: {
@@ -367,6 +374,7 @@ describe('Api Handler', () => {
 	test('Returns a 400 on validator validation failures', async () => {
 		const handler = ApiHandler(
 			{
+				name: 'putUser',
 				method: 'PUT',
 				route: '/users/{userId}',
 				validators: {
@@ -415,6 +423,7 @@ describe('Api Handler', () => {
 	test('Authorizer rejects request when it returns false', async () => {
 		const handler = ApiHandler(
 			{
+				name: 'getUser',
 				method: 'GET',
 				route: '/users/{userId}',
 				schemas: {},
@@ -446,6 +455,7 @@ describe('Api Handler', () => {
 
 		const handler = ApiHandler(
 			{
+				name: 'getUser',
 				method: 'GET',
 				route: '/users/{userId}',
 				schemas: {},
@@ -477,6 +487,7 @@ describe('Api Handler', () => {
 	test('When the authorizer function throws, it will return a 403', async () => {
 		const handler = ApiHandler(
 			{
+				name: 'getTest',
 				method: 'GET',
 				route: '/test',
 				authorizer: () => {
