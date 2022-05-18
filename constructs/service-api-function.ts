@@ -6,7 +6,6 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import type { HandlerNameAndPath } from '../extract/extract-handlers';
 import type { ApiHandlerDefinition } from '../handlers/api-handler';
-import { RemovalPolicy } from 'aws-cdk-lib';
 
 export interface ServiceApiFunctionProps {
 	role: iam.IRole;
@@ -71,7 +70,7 @@ export class ServiceApiFunction extends Construct {
 			layers,
 		});
 
-		this.fn.logGroup.applyRemovalPolicy(RemovalPolicy.DESTROY);
+		this.fn.logGroup.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
 
 		this.fn.grantInvoke(apiGatewayServicePrincipal);
 
