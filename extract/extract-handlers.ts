@@ -54,10 +54,6 @@ export function extractHandlers(path: string) {
 						const fullDefinition: FullHandlerDefinition<ApiHandlerDefinition> =
 							{
 								...definition,
-								name: `${definition.method}${definition.route.replace(
-									/\//g,
-									'-',
-								)}`,
 								path: file,
 							};
 
