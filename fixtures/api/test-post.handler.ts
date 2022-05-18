@@ -8,6 +8,7 @@ interface User {
 
 export const handler = ApiHandler(
 	{
+		name: 'createUser',
 		method: 'POST',
 		route: '/users',
 		description: 'Create a user',

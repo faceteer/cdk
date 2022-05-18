@@ -14,13 +14,13 @@ describe('Parse Handlers', () => {
 		);
 
 		expect(handlers.api).toEqual({
-			'GET-users-{userId}': {
+			ApiGetUser: {
 				method: 'GET',
 				route: '/users/{userId}',
 				pathParameters: ['userId'],
 				description: 'Get a user',
 				memorySize: 512,
-				name: 'GET-users-{userId}',
+				name: 'ApiGetUser',
 				path: `${basePath}api/test-get.handler.ts`,
 				validators: undefined,
 				schemas: {
@@ -38,14 +38,14 @@ describe('Parse Handlers', () => {
 					},
 				},
 			},
-			'POST-users': {
+			ApiCreateUser: {
 				method: 'POST',
 				route: '/users',
 				description: 'Create a user',
 				memorySize: 256,
 				disableAuth: true,
 				timeout: 900,
-				name: 'POST-users',
+				name: 'ApiCreateUser',
 				path: `${basePath}api/test-post.handler.ts`,
 				schemas: undefined,
 				validators: {

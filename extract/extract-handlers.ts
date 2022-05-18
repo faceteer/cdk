@@ -54,10 +54,7 @@ export function extractHandlers(path: string) {
 						const fullDefinition: FullHandlerDefinition<ApiHandlerDefinition> =
 							{
 								...definition,
-								name: `${definition.method}${definition.route.replace(
-									/\//g,
-									'-',
-								)}`,
+								name: pascalCase(`Api ${definition.name}`),
 								path: file,
 							};
 
