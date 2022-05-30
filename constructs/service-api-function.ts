@@ -70,8 +70,6 @@ export class ServiceApiFunction extends Construct {
 			layers,
 		});
 
-		this.fn.logGroup.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
-
 		this.fn.grantInvoke(apiGatewayServicePrincipal);
 
 		const integration = new apigwv2.CfnIntegration(this, `Integration`, {
