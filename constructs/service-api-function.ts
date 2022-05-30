@@ -3,6 +3,7 @@ import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambdaNodeJs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import type { HandlerNameAndPath } from '../extract/extract-handlers';
 import type { ApiHandlerDefinition } from '../handlers/api-handler';
@@ -70,7 +71,10 @@ export class ServiceApiFunction extends Construct {
 			layers,
 		});
 
-		this.fn.logGroup.applyRemovalPolicy(cdk.RemovalPolicy.DESTROY);
+		new logs.LogGroup(this, 'LogGroup', {
+			logGroupName: `/aws/lambda/${this.fn.functionName}`,
+			removalPolicy: cdk.RemovalPolicy.DESTROY,
+		});
 
 		this.fn.grantInvoke(apiGatewayServicePrincipal);
 
