@@ -1,0 +1,30 @@
+import { AxiosRequestConfig } from 'axios';
+import { <%= serviceName %> } from '../<%= serviceName %>';
+import { <%= serviceName %>Response } from '../types/base-responses';
+import { axiosClient } from './axios-client';
+import { buildApiResponse } from './build-response';
+import { isResponseSuccessful } from './is-response-successful';
+
+export async function makeRequest<T>(
+	this: <%= serviceName %>,
+	config: AxiosRequestConfig,
+	attempts = 1,
+): Promise<<%= serviceName %>Response<T>> {
+	const authToken = await this.options.tokenizer.getToken();
+	config.headers = {
+		...config.headers,
+		Authorization: `Bearer ${authToken}`,
+	};
+	const axiosResponse = await axiosClient.request<T>(config);
+
+	const wasSuccessful = isResponseSuccessful(axiosResponse.status);
+
+	if (!wasSuccessful && attempts < this.options.maxRetryAttempts) {
+		if (axiosResponse.status === 403) {
+			this.options.tokenizer.clearToken();
+		}
+		return this.makeRequest<T>(config, attempts + 1);
+	}
+
+	return buildApiResponse(axiosResponse);
+}
