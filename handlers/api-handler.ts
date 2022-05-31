@@ -25,6 +25,7 @@ export interface ApiHandlerDefinition<
 	R = never,
 	P extends ReadonlyArray<string> = ReadonlyArray<string>,
 > extends HandlerDefinition {
+	/** The name of the function  */
 	name: string;
 	/** HTTP method for which this function is invoked. */
 	method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
