@@ -20,7 +20,8 @@
     "test:ci": "jest --ci --runInBand --silent --coverage && codecov",
     "build:clean": "tsc -b --clean",
     "build": "tsc -b --clean && tsc -b",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "generate-client": "npx ts-node codegen/client/generate-client.ts"
   },
   "engines": {
     "node": ">=14"
