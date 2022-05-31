@@ -37,10 +37,10 @@ const getRequestCode = ({
 }) => {
 	return ejs.renderFile('codegen/client/templates/request.ejs', {
 		serviceName,
-		functionName: camelCase(handler.name),
-		requestName: pascalCase(`${handler.name}Request`),
+		functionName: camelCase(handler.name.replace('Api', '')),
+		requestName: pascalCase(`${handler.name.replace('Api', '')}Request`),
 		requestType: '{}',
-		responseName: pascalCase(`${handler.name}Response`),
+		responseName: pascalCase(`${handler.name.replace('Api', '')}Response`),
 		responseType: '{}',
 		route: handler.route.replace(/{/g, '${'),
 		method: handler.method,
@@ -67,7 +67,7 @@ async function generateClient() {
 	const promises = Object.values(handlers).map(async (handler) => {
 		const code = await getRequestCode({ serviceName, handler });
 		await fs.writeFileSync(
-			`client/requests/${camelCase(handler.name)}.ts`,
+			`client/requests/${camelCase(handler.name.replace('Api', ''))}.ts`,
 			code,
 		);
 	});
