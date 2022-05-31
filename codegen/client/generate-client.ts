@@ -83,10 +83,11 @@ async function generateClient() {
 	await fs.rmSync('client', { recursive: true, force: true });
 
 	await fs.mkdirSync('client');
-	await fs.mkdirSync('client/requests');
+	await fs.mkdirSync('client/src');
+	await fs.mkdirSync('client/src/requests');
 
 	const classCode = await getServiceClass({ serviceName, handlers });
-	await fs.writeFileSync(`client/${serviceName}.ts`, classCode);
+	await fs.writeFileSync(`client/src/${serviceName}.ts`, classCode);
 	const packageCode = await getPackageJson({ packageName: '@tailwind/test' });
 	await fs.writeFileSync('client/package.json', packageCode);
 	const tsconfigCode = await getTSConfig();
@@ -95,7 +96,7 @@ async function generateClient() {
 	const promises = Object.values(handlers).map(async (handler) => {
 		const code = await getRequestCode({ serviceName, handler });
 		await fs.writeFileSync(
-			`client/requests/${camelCase(handler.name)}.ts`,
+			`client/src/requests/${camelCase(handler.name)}.ts`,
 			code,
 		);
 	});
