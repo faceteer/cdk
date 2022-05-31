@@ -1,20 +1,15 @@
 import { ApiHandler } from '../../handlers/api-handler';
 import { SuccessResponse } from '../../response/success-response';
-import type { JSONSchemaType } from 'ajv';
+import { z } from 'zod';
 
-interface User {
-	userId: string;
-	email: string;
-}
+const UserSchema = z.object({
+	userId: z.string(),
+	email: z.string(),
+});
 
-const UserSchema: JSONSchemaType<User> = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string' },
-		email: { type: 'string' },
-	},
-	required: ['email', 'userId'],
-};
+const QuerySchema = z.object({
+	include: z.string().optional(),
+});
 
 export const handler = ApiHandler(
 	{
@@ -24,13 +19,14 @@ export const handler = ApiHandler(
 		description: 'Get a user',
 		memorySize: 512,
 		schemas: {
-			body: UserSchema,
+			query: QuerySchema,
+			response: UserSchema,
 		},
 		pathParameters: ['userId'],
 	},
 	async (event) => {
-		console.log(event);
+		console.log(event.input.body);
 
-		return SuccessResponse({ success: 'true' });
+		return SuccessResponse({ email: '', userId: '' });
 	},
 );

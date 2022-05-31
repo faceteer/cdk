@@ -1,38 +1,21 @@
 import { ApiHandler } from '../../handlers/api-handler';
 import { SuccessResponse } from '../../response/success-response';
-
-import Ajv, { JSONSchemaType } from 'ajv';
 import { invariant } from '../../util/invariant';
+import { z } from 'zod';
 
 interface User {
 	id: string;
 	name: string;
 }
 
-const ajv = new Ajv({
-	removeAdditional: 'all',
-	coerceTypes: true,
+const UserSchema = z.object({
+	id: z.string(),
+	name: z.string(),
 });
 
-const UserSchema: JSONSchemaType<User> = {
-	type: 'object',
-	properties: {
-		id: { type: 'string' },
-		name: { type: 'string' },
-	},
-	required: ['id', 'name'],
-};
-
-interface PutUserQuery {
-	force?: boolean;
-}
-
-const PutUserQuerySchema: JSONSchemaType<PutUserQuery> = {
-	type: 'object',
-	properties: {
-		force: { type: 'boolean', nullable: true },
-	},
-};
+const PutUserQuerySchema = z.object({
+	force: z.boolean().optional(),
+});
 
 describe('Api Handler', () => {
 	test('Api Handler with schemas validates', async () => {
@@ -99,24 +82,8 @@ describe('Api Handler', () => {
 				method: 'PUT',
 				route: '/users/{userId}',
 				validators: {
-					body: (body) => {
-						const validate = ajv.compile(UserSchema);
-						if (!validate(body)) {
-							const [validationError] = validate.errors ?? [];
-							throw validationError;
-						} else {
-							return body;
-						}
-					},
-					query: (query) => {
-						const validate = ajv.compile(PutUserQuerySchema);
-						if (!validate(query)) {
-							const [validationError] = validate.errors ?? [];
-							throw validationError;
-						} else {
-							return query;
-						}
-					},
+					body: (body) => UserSchema.parse(body),
+					query: (query) => PutUserQuerySchema.parse(query),
 				},
 				pathParameters: ['userId'] as const,
 			},
@@ -207,15 +174,7 @@ describe('Api Handler', () => {
 				method: 'PUT',
 				route: '/users/{userId}',
 				validators: {
-					body: (body) => {
-						const validate = ajv.compile(UserSchema);
-						if (!validate(body)) {
-							const [validationError] = validate.errors ?? [];
-							throw validationError;
-						} else {
-							return body;
-						}
-					},
+					body: (body) => UserSchema.parse(body),
 				},
 			},
 			async (event) => {
