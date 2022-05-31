@@ -4,6 +4,8 @@ import path from 'path';
 import { extractHandlers, FullHandlerDefinition } from '../../extract';
 import { ApiHandlerDefinition } from '../../handlers';
 import fs from 'fs';
+import { printNode, zodToTs } from 'zod-to-ts';
+import { z, ZodObject, ZodRawShape } from 'zod';
 
 const getPackageJson = ({ packageName }: { packageName: string }) => {
 	return ejs.renderFile('codegen/client/templates/package.ejs', {
@@ -35,13 +37,40 @@ const getRequestCode = ({
 	serviceName: string;
 	handler: FullHandlerDefinition<ApiHandlerDefinition<never, never, never>>;
 }) => {
+	let requestSchema = z.object({});
+	let responseType = '{}';
+	if (handler.pathParameters && handler.pathParameters.length > 0) {
+		requestSchema = requestSchema.merge(
+			z.object(
+				handler.pathParameters.reduce(
+					(o, key) => ({ ...o, [key]: z.string() }),
+					{},
+				),
+			),
+		);
+	}
+	if (handler?.schemas?.query) {
+		requestSchema = requestSchema.merge(
+			handler.schemas.query as unknown as ZodObject<ZodRawShape>,
+		);
+	}
+	if (handler?.schemas?.body) {
+		requestSchema = requestSchema.merge(
+			handler.schemas.body as unknown as ZodObject<ZodRawShape>,
+		);
+	}
+
+	if (handler?.schemas?.response) {
+		const { node } = zodToTs(handler.schemas.response, 'Request');
+		responseType = printNode(node);
+	}
 	return ejs.renderFile('codegen/client/templates/request.ejs', {
 		serviceName,
-		functionName: camelCase(handler.name.replace('Api', '')),
-		requestName: pascalCase(`${handler.name.replace('Api', '')}Request`),
-		requestType: '{}',
-		responseName: pascalCase(`${handler.name.replace('Api', '')}Response`),
-		responseType: '{}',
+		functionName: camelCase(handler.name),
+		requestName: pascalCase(`${handler.name}Request`),
+		requestType: printNode(zodToTs(requestSchema).node),
+		responseName: pascalCase(`${handler.name}Response`),
+		responseType,
 		route: handler.route.replace(/{/g, '${'),
 		method: handler.method,
 	});
@@ -50,6 +79,9 @@ const getRequestCode = ({
 async function generateClient() {
 	const { api } = extractHandlers(path.join(__dirname, '../../fixtures/'));
 	const handlers = Object.values(api);
+	handlers.forEach((handler) => {
+		handler.name = handler.name.replace('Api', '');
+	});
 	const serviceName = pascalCase('Test');
 
 	await fs.rmSync('client', { recursive: true, force: true });
@@ -67,7 +99,7 @@ async function generateClient() {
 	const promises = Object.values(handlers).map(async (handler) => {
 		const code = await getRequestCode({ serviceName, handler });
 		await fs.writeFileSync(
-			`client/requests/${camelCase(handler.name.replace('Api', ''))}.ts`,
+			`client/requests/${camelCase(handler.name)}.ts`,
 			code,
 		);
 	});

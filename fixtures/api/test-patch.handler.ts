@@ -7,6 +7,10 @@ const BodySchema = z.object({
 	email: z.string().optional(),
 });
 
+const QuerySchema = z.object({
+	force: z.boolean().optional(),
+});
+
 const ResponseSchema = z.object({
 	userId: z.string(),
 	email: z.string(),
@@ -23,6 +27,7 @@ export const handler = ApiHandler(
 		timeout: 900,
 		schemas: {
 			body: BodySchema,
+			query: QuerySchema,
 			response: ResponseSchema,
 		},
 	},

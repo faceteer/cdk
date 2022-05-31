@@ -7,6 +7,10 @@ const UserSchema = z.object({
 	email: z.string(),
 });
 
+const QuerySchema = z.object({
+	include: z.string().optional(),
+});
+
 export const handler = ApiHandler(
 	{
 		name: 'getUser',
@@ -15,13 +19,14 @@ export const handler = ApiHandler(
 		description: 'Get a user',
 		memorySize: 512,
 		schemas: {
-			body: UserSchema,
+			query: QuerySchema,
+			response: UserSchema,
 		},
 		pathParameters: ['userId'],
 	},
 	async (event) => {
 		console.log(event.input.body);
 
-		return SuccessResponse({ success: 'true' });
+		return SuccessResponse({ email: '', userId: '' });
 	},
 );
