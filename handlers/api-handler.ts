@@ -1,4 +1,3 @@
-import Ajv, { JSONSchemaType, ValidateFunction } from 'ajv';
 import type {
 	APIGatewayProxyEventPathParameters,
 	APIGatewayProxyEventV2,
@@ -6,13 +5,9 @@ import type {
 	Handler,
 } from 'aws-lambda';
 import * as qs from 'qs';
+import { ZodType } from 'zod';
 import { FailedResponse, IFailedResponse, ISuccessResponse } from '../response';
 import { HandlerDefinition, HandlerTypes } from './handler';
-
-const ajv = new Ajv({
-	removeAdditional: 'all',
-	coerceTypes: true,
-});
 
 export type ApiPathParameters<T extends ReadonlyArray<string>> = Record<
 	T[number],
@@ -48,12 +43,6 @@ export interface ApiHandlerDefinition<
 	 */
 	pathParameters?: P;
 	/**
-	 * Optional override of default AJV instance
-	 *
-	 * @deprecated Use your own AJV instance in `validators`
-	 */
-	ajv?: Ajv;
-	/**
 	 * The amount of time that Lambda allows a function to run before stopping it.
 	 * The default is 3 seconds. The maximum allowed value is 30 seconds.
 	 *
@@ -61,11 +50,11 @@ export interface ApiHandlerDefinition<
 	 */
 	timeout?: number;
 
-	/** @deprecated Use `validators` instead */
+	/** Overwrites `validators` and is used for client generation */
 	schemas?: {
-		body?: JSONSchemaType<B>;
-		query?: JSONSchemaType<Q>;
-		response?: JSONSchemaType<R>;
+		body?: ZodType<B>;
+		query?: ZodType<Q>;
+		response?: ZodType<R>;
 	};
 
 	validators?: {
@@ -135,11 +124,6 @@ export type ApiHandlerWithDefinition<
 	definition: ApiHandlerDefinition<B, Q, R>;
 };
 
-interface AjvValidators<B, Q> {
-	body?: ValidateFunction<B>;
-	query?: ValidateFunction<Q>;
-}
-
 /**
  * Creates a handler that will be attached to the service api
  * @param options
@@ -159,19 +143,16 @@ export function ApiHandler<
 	const {
 		schemas,
 		authorizer,
-		ajv: customAjv,
-		validators,
+		validators: initialValidators,
 		...definition
 	} = options;
 
-	const ajvValidators: AjvValidators<B, Q> = {};
-
-	if (schemas && schemas.body) {
-		ajvValidators.body = (customAjv ?? ajv).compile(schemas.body);
-	}
-
+	const validators = initialValidators ?? {};
 	if (schemas && schemas.query) {
-		ajvValidators.query = (customAjv ?? ajv).compile(schemas.query);
+		validators.query = (query: unknown) => schemas.query!.parse(query);
+	}
+	if (schemas && schemas.body) {
+		validators.body = (body: unknown) => schemas.body!.parse(body);
 	}
 
 	const wrappedHandler: APIGatewayProxyHandlerV2 = async (event, context) => {
@@ -207,17 +188,7 @@ export function ApiHandler<
 			if (validators) {
 				validateBodyResult = validateInput(validators.body, event.body);
 				validateQueryResult = validateInput(validators.query, queryBody);
-			} else if (ajvValidators) {
-				validateBodyResult = validateDeprecatedInput(
-					ajvValidators.body,
-					event.body,
-				);
-				validateQueryResult = validateDeprecatedInput(
-					ajvValidators.query,
-					queryBody,
-				);
 			}
-
 			if (!validateBodyResult.success) {
 				return FailedResponse(validateBodyResult.error, { statusCode: 400 });
 			}
@@ -322,37 +293,6 @@ function validateInput<T>(
 			error: error instanceof Error ? { message: error.message } : error,
 		};
 	}
-}
-
-/**
- * Validate the input for our query or our body depending
- * @param validator
- * @param input
- * @returns
- * @deprecated
- */
-function validateDeprecatedInput<T>(
-	validator?: ValidateFunction<T>,
-	input?: string | unknown,
-): ValidationResult<T> {
-	if (!validator) {
-		return { success: true, data: input as unknown as T };
-	}
-	/**
-	 * Assume any string inputs are JSON
-	 */
-	if (typeof input === 'string') {
-		input = JSON.parse(input);
-	}
-
-	if (validator(input)) {
-		return { success: true, data: input };
-	}
-	const [validationError] = validator.errors ?? [];
-	if (validationError) {
-		return { success: false, error: validationError };
-	}
-	throw new Error('Unknown error running AJV validator for input');
 }
 
 /**
