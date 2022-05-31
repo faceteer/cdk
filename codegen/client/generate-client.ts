@@ -5,7 +5,7 @@ import { extractHandlers, FullHandlerDefinition } from '../../extract';
 import { ApiHandlerDefinition } from '../../handlers';
 import fs from 'fs';
 import { printNode, zodToTs } from 'zod-to-ts';
-import { z, ZodObject, ZodRawShape } from 'zod';
+import { z } from 'zod';
 
 const getPackageJson = ({ packageName }: { packageName: string }) => {
 	return ejs.renderFile('codegen/client/templates/package.ejs', {
@@ -64,9 +64,9 @@ const getRequestCode = ({
 		serviceName,
 		functionName: camelCase(handler.name),
 		requestName: pascalCase(`${handler.name}Request`),
-		requestType: printNode(zodToTs(requestSchema).node),
+		requestType: printNode(zodToTs(requestSchema).node).replace(/ {4}/g, '	'),
 		responseName: pascalCase(`${handler.name}Response`),
-		responseType: printNode(zodToTs(responseSchema).node),
+		responseType: printNode(zodToTs(responseSchema).node).replace(/ {4}/g, '	'),
 		route: handler.route.replace(/{/g, '${'),
 		method: handler.method,
 	});

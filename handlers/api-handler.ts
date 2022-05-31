@@ -5,7 +5,7 @@ import type {
 	Handler,
 } from 'aws-lambda';
 import * as qs from 'qs';
-import { ZodObject, ZodSchema, ZodType } from 'zod';
+import { ZodObject, ZodType } from 'zod';
 import { FailedResponse, IFailedResponse, ISuccessResponse } from '../response';
 import { HandlerDefinition, HandlerTypes } from './handler';
 
@@ -153,10 +153,10 @@ export function ApiHandler<
 
 	const validators = initialValidators ?? {};
 	if (schemas && schemas.query) {
-		validators.query = (query: unknown) => schemas.query!.parse(query);
+		validators.query = (query: unknown) => schemas.query!.parse(query) as Q;
 	}
 	if (schemas && schemas.body) {
-		validators.body = (body: unknown) => schemas.body!.parse(body);
+		validators.body = (body: unknown) => schemas.body!.parse(body) as B;
 	}
 
 	const wrappedHandler: APIGatewayProxyHandlerV2 = async (event, context) => {
