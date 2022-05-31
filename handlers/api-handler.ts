@@ -5,7 +5,7 @@ import type {
 	Handler,
 } from 'aws-lambda';
 import * as qs from 'qs';
-import { ZodType } from 'zod';
+import { ZodObject, ZodSchema, ZodType } from 'zod';
 import { FailedResponse, IFailedResponse, ISuccessResponse } from '../response';
 import { HandlerDefinition, HandlerTypes } from './handler';
 
@@ -13,6 +13,10 @@ export type ApiPathParameters<T extends ReadonlyArray<string>> = Record<
 	T[number],
 	string
 >;
+
+type ZodShapeFromType<Input> = Required<{
+	[K in keyof Input]: ZodType<Input[K], any, Input[K]>;
+}>;
 
 export interface ApiHandlerDefinition<
 	B = never,
@@ -52,9 +56,9 @@ export interface ApiHandlerDefinition<
 
 	/** Overwrites `validators` and is used for client generation */
 	schemas?: {
-		body?: ZodType<B>;
-		query?: ZodType<Q>;
-		response?: ZodType<R>;
+		body?: ZodObject<ZodShapeFromType<B>>;
+		query?: ZodObject<ZodShapeFromType<Q>>;
+		response?: ZodObject<ZodShapeFromType<R>>;
 	};
 
 	validators?: {

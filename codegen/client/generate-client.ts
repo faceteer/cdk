@@ -38,7 +38,8 @@ const getRequestCode = ({
 	handler: FullHandlerDefinition<ApiHandlerDefinition<never, never, never>>;
 }) => {
 	let requestSchema = z.object({});
-	let responseType = '{}';
+	let responseSchema = z.object({});
+
 	if (handler.pathParameters && handler.pathParameters.length > 0) {
 		requestSchema = requestSchema.merge(
 			z.object(
@@ -50,27 +51,22 @@ const getRequestCode = ({
 		);
 	}
 	if (handler?.schemas?.query) {
-		requestSchema = requestSchema.merge(
-			handler.schemas.query as unknown as ZodObject<ZodRawShape>,
-		);
+		requestSchema = requestSchema.merge(handler.schemas.query);
 	}
 	if (handler?.schemas?.body) {
-		requestSchema = requestSchema.merge(
-			handler.schemas.body as unknown as ZodObject<ZodRawShape>,
-		);
+		requestSchema = requestSchema.merge(handler.schemas.body);
+	}
+	if (handler?.schemas?.response) {
+		responseSchema = handler.schemas.response;
 	}
 
-	if (handler?.schemas?.response) {
-		const { node } = zodToTs(handler.schemas.response, 'Request');
-		responseType = printNode(node);
-	}
 	return ejs.renderFile('codegen/client/templates/request.ejs', {
 		serviceName,
 		functionName: camelCase(handler.name),
 		requestName: pascalCase(`${handler.name}Request`),
 		requestType: printNode(zodToTs(requestSchema).node),
 		responseName: pascalCase(`${handler.name}Response`),
-		responseType,
+		responseType: printNode(zodToTs(responseSchema).node),
 		route: handler.route.replace(/{/g, '${'),
 		method: handler.method,
 	});
