@@ -1,19 +1,23 @@
-import { Gandalf } from '@tailwind/gandalf';
 import { makeRequest } from './helpers/make-request';
 <% for (const arg of functionNames) { -%>
 import { <%= arg %> } from './requests/<%= arg %>';
 <% } -%>
 
+type Tokenizer = {
+	getToken: () => string;
+	clearToken: () => void;
+};
+
 export type <%= serviceName %>Options = {
-	gandalf: Gandalf;
+	tokenizer: Tokenizer;
 	maxRetryAttempts?: number;
 };
 
 export class <%= serviceName %> {
 	protected options: Required<<%= serviceName %>Options>;
 
-	constructor({ gandalf, maxRetryAttempts = 4 }: <%= serviceName %>Options) {
-		this.options = { gandalf, maxRetryAttempts };
+	constructor({ tokenizer, maxRetryAttempts = 4 }: <%= serviceName %>Options) {
+		this.options = { tokenizer, maxRetryAttempts };
 	}
 
 	<%_ for (const arg of functionNames) { -%>

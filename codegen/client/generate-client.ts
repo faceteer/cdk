@@ -72,6 +72,12 @@ const getRequestCode = ({
 	});
 };
 
+const getMakeRequest = ({ serviceName }: { serviceName: string }) => {
+	return ejs.renderFile('codegen/client/templates/make-request.ejs', {
+		serviceName,
+	});
+};
+
 async function generateClient() {
 	const { api } = extractHandlers(path.join(__dirname, '../../fixtures/'));
 	const handlers = Object.values(api);
@@ -85,6 +91,7 @@ async function generateClient() {
 	await fs.mkdirSync('client');
 	await fs.mkdirSync('client/src');
 	await fs.mkdirSync('client/src/requests');
+	await fs.mkdirSync('client/src/helpers');
 
 	const classCode = await getServiceClass({ serviceName, handlers });
 	await fs.writeFileSync(`client/src/${serviceName}.ts`, classCode);
@@ -92,6 +99,8 @@ async function generateClient() {
 	await fs.writeFileSync('client/package.json', packageCode);
 	const tsconfigCode = await getTSConfig();
 	await fs.writeFileSync('client/tsconfig.json', tsconfigCode);
+	const makeRequest = await getMakeRequest({ serviceName });
+	await fs.writeFileSync('client/src/helpers/make-request.ts', makeRequest);
 
 	const promises = Object.values(handlers).map(async (handler) => {
 		const code = await getRequestCode({ serviceName, handler });
