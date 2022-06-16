@@ -98,8 +98,6 @@ describe('Parse Handlers', () => {
 				},
 				memorySize: 1024,
 				timeout: 900,
-				maxBatchingWindow: 10,
-				maximumAttempts: 10,
 				path: `${basePath}event/test-event.handler.ts`,
 			},
 		});
