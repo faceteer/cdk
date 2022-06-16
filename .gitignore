@@ -158,6 +158,8 @@ handlers/**/*.js
 handlers/**/*.d.ts
 response/**/*.js
 response/**/*.d.ts
+util/**/*.js
+util/**/*.d.ts
 __tests__/**/*.js
 __tests__/**/*.d.ts
 client/**/*.js

@@ -77,6 +77,18 @@ describe('Parse Handlers', () => {
 			},
 		});
 
+		expect(handlers.event).toEqual({
+			EventUserAddedEvent: {
+				name: 'EventUserAddedEvent',
+				eventPattern: {
+					detailType: ['Some user was added type'],
+				},
+				memorySize: 1024,
+				timeout: 900,
+				path: `${basePath}event/test-event.handler.ts`,
+			},
+		});
+
 		expect(handlers.notification).toEqual({
 			IncomingEmailSendToProcessQueue: {
 				name: 'IncomingEmailSendToProcessQueue',

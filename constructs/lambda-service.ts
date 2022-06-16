@@ -7,6 +7,7 @@ import * as sns from 'aws-cdk-lib/aws-sns';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as route53Targets from 'aws-cdk-lib/aws-route53-targets';
+import * as events from 'aws-cdk-lib/aws-events';
 import { constantCase } from 'change-case';
 import { Construct } from 'constructs';
 import { extractHandlers } from '../extract/extract-handlers';
@@ -14,6 +15,7 @@ import { ServiceApiFunction } from './service-api-function';
 import { ServiceNotificationFunction } from './service-notification-function';
 import { ServiceQueueFunction } from './service-queue-function';
 import { ServiceCronFunction } from './service-cron-function';
+import { ServiceEventFunction } from './service-event-function';
 
 export interface LambdaServiceProps {
 	handlersFolder: string;
@@ -36,6 +38,7 @@ export interface LambdaServiceProps {
 		domainName: string;
 		route53Zone?: route53.IHostedZone;
 	};
+	eventBuses?: events.IEventBus[];
 }
 
 export class LambdaService extends Construct implements iam.IGrantable {
@@ -58,6 +61,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			role,
 			defaultScopes,
 			domain,
+			eventBuses,
 		}: LambdaServiceProps,
 	) {
 		super(scope, id);
@@ -241,6 +245,36 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				queueFn.dlqEnvironmentVariable,
 				queueFn.dlq.queueName,
 			);
+		}
+
+		for (const eventHandler of Object.values(handlers.event)) {
+			if (!eventBuses) {
+				throw new Error(
+					'Tried to create an event handler without any configured event buses',
+				);
+			}
+
+			let eventBus = eventBuses[0];
+			if (eventHandler.eventBusName) {
+				const matchedEventBus = eventBuses.find(
+					(bus) => bus.eventBusName === eventHandler.eventBusName,
+				);
+				if (!matchedEventBus) {
+					throw new Error(`
+						Could not find the event bus "${eventHandler.eventBusName}" specified event bus name. 
+						Please make sure the event handler "${eventHandler.name}" is configured properly or that you have configured the appropriate event buses.
+					`);
+				}
+				eventBus = matchedEventBus;
+			}
+
+			const eventFn = new ServiceEventFunction(this, eventHandler.name, {
+				role: role,
+				definition: eventHandler,
+				bundlingOptions,
+				eventBus,
+			});
+			this.functions.push(eventFn.fn);
 		}
 
 		for (const notificationHandler of Object.values(handlers.notification)) {
