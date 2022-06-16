@@ -14,12 +14,12 @@ export const handler = EventHandler(
 		},
 		memorySize: 1024,
 		timeout: 900,
-		maxBatchingWindow: 10,
 		validator: (body) => {
-			return body as EventBridgeEvent<string, User>;
+			return body as EventBridgeEvent<'Some user was added type', User>;
 		},
 	},
 	async (event) => {
-		console.log(event.Records);
+		console.log(event.detail);
+		console.log(event['detail-type']);
 	},
 );

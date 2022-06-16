@@ -1,3 +1,4 @@
+import { EventBridgeEvent } from 'aws-lambda';
 import * as fs from 'fs';
 import { pascalCase } from 'pascal-case';
 import * as path from 'path';
@@ -49,7 +50,7 @@ export function extractHandlers(path: string) {
 			const handler = require(file.replace(/\.ts$/g, '')).handler as
 				| ApiHandlerWithDefinition
 				| QueueHandlerWithDefinition<unknown>
-				| EventHandlerWithDefinition
+				| EventHandlerWithDefinition<EventBridgeEvent<string, unknown>>
 				| CronHandlerWithDefinition
 				| NotificationHandlerWithDefinition;
 			switch (handler.type) {
