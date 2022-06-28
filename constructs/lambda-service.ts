@@ -198,12 +198,14 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			/**
 			 * Validate that `pathParameters` and `route` are consistent
 			 */
-			const regex = /\{[a-zA-Z_$0-9]+\}/g;
+			const regex = /\{[a-zA-Z_$0-9+]+\}/g;
 			const pathParameters = [...(apiHandler.pathParameters ?? [])];
 			const routeParameters =
 				apiHandler.route
 					.match(regex)
-					?.map((param) => param.substring(1, param.length - 1)) ?? [];
+					?.map((param) =>
+						param.substring(1, param.length - 1).replace('+', ''),
+					) ?? [];
 			pathParameters.sort();
 			routeParameters.sort();
 			if (JSON.stringify(pathParameters) !== JSON.stringify(routeParameters)) {
