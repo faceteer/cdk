@@ -16,6 +16,7 @@ import { ServiceNotificationFunction } from './service-notification-function';
 import { ServiceQueueFunction } from './service-queue-function';
 import { ServiceCronFunction } from './service-cron-function';
 import { ServiceEventFunction } from './service-event-function';
+import { validatePathParameters } from '../util/validate-path-parameters';
 
 export interface LambdaServiceProps {
 	handlersFolder: string;
@@ -198,19 +199,9 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			/**
 			 * Validate that `pathParameters` and `route` are consistent
 			 */
-			const regex = /\{[a-zA-Z_$0-9]+\}/g;
-			const pathParameters = [...(apiHandler.pathParameters ?? [])];
-			const routeParameters =
-				apiHandler.route
-					.match(regex)
-					?.map((param) => param.substring(1, param.length - 1)) ?? [];
-			pathParameters.sort();
-			routeParameters.sort();
-			if (JSON.stringify(pathParameters) !== JSON.stringify(routeParameters)) {
-				throw new Error(
-					`The Api Handler definition in "${apiHandler.path}" does not have properly configured path parameters`,
-				);
-			}
+			validatePathParameters(apiHandler.route, [
+				...(apiHandler.pathParameters ?? []),
+			]);
 			/**
 			 * Add a new function to the API
 			 */
