@@ -154,6 +154,72 @@ describe('Api Handler', () => {
 		}
 	});
 
+	test('Api Handler with schemas still validates with empty query', async () => {
+		const requestBody = {
+			id: '545467',
+			name: 'jeremy',
+		};
+
+		const handler = ApiHandler(
+			{
+				name: 'putUser',
+				method: 'PUT',
+				route: '/users/{userId}',
+				validators: {
+					body: (body) => {
+						const validate = ajv.compile(UserSchema);
+						if (!validate(body)) {
+							const [validationError] = validate.errors ?? [];
+							throw validationError;
+						} else {
+							return body;
+						}
+					},
+					query: (query) => {
+						console.log('query', query);
+						const validate = ajv.compile(PutUserQuerySchema);
+						if (!validate(query)) {
+							const [validationError] = validate.errors ?? [];
+							throw validationError;
+						} else {
+							return query;
+						}
+					},
+				},
+				pathParameters: ['userId'] as const,
+			},
+			async (event) => {
+				const user = event.input.body;
+				expect(event.input.path.userId).toBe(requestBody.id);
+				expect(event.input.query.force).toBeUndefined();
+
+				return SuccessResponse(user);
+			},
+		);
+
+		const response = await handler(
+			{
+				pathParameters: {
+					userId: requestBody.id,
+				},
+				body: JSON.stringify(requestBody),
+			} as any,
+			{} as any,
+			() => {},
+		);
+
+		expect(response).toBeTruthy();
+		if (response) {
+			expect(response).toEqual({
+				body: JSON.stringify(requestBody),
+				statusCode: 200,
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			});
+		}
+	});
+
 	test('Api Handler with Schemas Handles Invalid Requests', async () => {
 		const handler = ApiHandler(
 			{
