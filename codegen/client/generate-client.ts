@@ -17,6 +17,12 @@ const getTSConfig = () => {
 	return ejs.renderFile('codegen/client/templates/tsconfig.ejs');
 };
 
+const getBaseResponse = ({ serviceName }: { serviceName: string }) => {
+	return ejs.renderFile('codegen/client/templates/base-response.ejs', {
+		serviceName,
+	});
+};
+
 const getServiceClass = ({
 	serviceName,
 	handlers,
@@ -37,36 +43,23 @@ const getRequestCode = ({
 	serviceName: string;
 	handler: FullHandlerDefinition<ApiHandlerDefinition<never, never, never>>;
 }) => {
-	let requestSchema = z.object({});
-	let responseSchema = z.object({});
-
-	if (handler.pathParameters && handler.pathParameters.length > 0) {
-		requestSchema = requestSchema.merge(
-			z.object(
-				handler.pathParameters.reduce(
-					(o, key) => ({ ...o, [key]: z.string() }),
-					{},
-				),
-			),
-		);
+	let requestType = '';
+	let requestSupplier = '';
+	if (handler.pathParameters) {
+		for (const param of handler.pathParameters) {
+			requestType += `	${param}: string;\n`;
+			requestSupplier += `${param},`;
+		}
+		requestSupplier = `const { ${requestSupplier.slice(0, -1)} } = request;`;
 	}
-	if (handler?.schemas?.query) {
-		requestSchema = requestSchema.merge(handler.schemas.query);
-	}
-	if (handler?.schemas?.body) {
-		requestSchema = requestSchema.merge(handler.schemas.body);
-	}
-	if (handler?.schemas?.response) {
-		responseSchema = handler.schemas.response;
-	}
-
 	return ejs.renderFile('codegen/client/templates/request.ejs', {
 		serviceName,
 		functionName: camelCase(handler.name),
 		requestName: pascalCase(`${handler.name}Request`),
-		requestType: printNode(zodToTs(requestSchema).node).replace(/ {4}/g, '	'),
+		requestType: requestType ? `{\n${requestType}}` : '{}',
 		responseName: pascalCase(`${handler.name}Response`),
-		responseType: printNode(zodToTs(responseSchema).node).replace(/ {4}/g, '	'),
+		responseType: '{}',
+		requestSupplier,
 		route: handler.route.replace(/{/g, '${'),
 		method: handler.method,
 	});
@@ -89,9 +82,8 @@ async function generateClient() {
 	await fs.rmSync('client', { recursive: true, force: true });
 
 	await fs.mkdirSync('client');
-	await fs.mkdirSync('client/src');
-	await fs.mkdirSync('client/src/requests');
-	await fs.mkdirSync('client/src/helpers');
+	await fs.mkdirSync('client/requests');
+	await fs.mkdirSync('client/types');
 
 	const classCode = await getServiceClass({ serviceName, handlers });
 	await fs.writeFileSync(`client/src/${serviceName}.ts`, classCode);
@@ -99,8 +91,8 @@ async function generateClient() {
 	await fs.writeFileSync('client/package.json', packageCode);
 	const tsconfigCode = await getTSConfig();
 	await fs.writeFileSync('client/tsconfig.json', tsconfigCode);
-	const makeRequest = await getMakeRequest({ serviceName });
-	await fs.writeFileSync('client/src/helpers/make-request.ts', makeRequest);
+	const baseResponseCode = await getBaseResponse({ serviceName });
+	await fs.writeFileSync('client/types/base-response.ts', baseResponseCode);
 
 	const promises = Object.values(handlers).map(async (handler) => {
 		const code = await getRequestCode({ serviceName, handler });
