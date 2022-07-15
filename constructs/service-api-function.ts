@@ -7,6 +7,7 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import type { HandlerNameAndPath } from '../extract/extract-handlers';
 import type { ApiHandlerDefinition } from '../handlers/api-handler';
+import { LambdaServiceProps } from './lambda-service';
 
 export interface ServiceApiFunctionProps {
 	role: iam.IRole;
@@ -15,7 +16,8 @@ export interface ServiceApiFunctionProps {
 	authorizer?: apigwv2.CfnAuthorizer;
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
 	layers?: lambda.ILayerVersion[];
-	defaultScopes?: string[];
+	defaultScopes?: LambdaServiceProps['defaultScopes'];
+	defaults?: LambdaServiceProps['defaults'];
 }
 
 export class ServiceApiFunction extends Construct {
@@ -33,6 +35,7 @@ export class ServiceApiFunction extends Construct {
 			bundlingOptions = {},
 			layers,
 			defaultScopes = [],
+			defaults,
 		}: ServiceApiFunctionProps,
 	) {
 		super(scope, id);
@@ -52,10 +55,12 @@ export class ServiceApiFunction extends Construct {
 			awsSdkConnectionReuse: true,
 			entry: definition.path,
 			description: definition.description,
-			memorySize: definition.memorySize ?? 192,
+			memorySize: definition.memorySize ?? defaults?.memorySize ?? 192,
 			reservedConcurrentExecutions: definition.reservedConcurrentExecutions,
 			timeout: definition.timeout
-				? cdk.Duration.seconds(Math.max(30, definition.timeout))
+				? cdk.Duration.seconds(
+						Math.max(30, definition.timeout ?? defaults?.timeout),
+				  )
 				: undefined,
 			role: role,
 			bundling: {
@@ -104,7 +109,7 @@ export class ServiceApiFunction extends Construct {
 			authorizationScopes:
 				definition.disableAuth || authorizerType !== 'JWT'
 					? undefined
-					: definition.scopes ?? defaultScopes,
+					: definition.scopes ?? defaults?.scopes ?? defaultScopes,
 		});
 	}
 }
