@@ -12,6 +12,8 @@
     "handlers/**/*.d.ts",
     "response/**/*.js",
     "response/**/*.d.ts",
+    "utils/**/*.js",
+    "utils/**/*.d.ts",
     "index.js",
     "index.d.ts"
   ],
