@@ -187,7 +187,7 @@ export function ApiHandler<
 				);
 			}
 
-			let queryBody: unknown;
+			let queryBody = {};
 			if (event.rawQueryString) {
 				try {
 					queryBody = qs.parse(event.rawQueryString);
