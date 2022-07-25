@@ -30,6 +30,12 @@ export interface LambdaServiceProps {
 		identitySource: string[];
 		enableSimpleResponses?: boolean;
 	};
+	defaults?: {
+		scopes: string[];
+		memorySize: number;
+		timeout: number;
+	};
+	/** @deprecated Use `defaults.scopes` */
 	defaultScopes?: string[];
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
 	role?: iam.IRole;
@@ -60,6 +66,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			jwtAuthorizer,
 			bundlingOptions = {},
 			role,
+			defaults,
 			defaultScopes,
 			domain,
 			eventBuses,
@@ -212,6 +219,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				authorizer: authorizer,
 				bundlingOptions,
 				defaultScopes: defaultScopes,
+				defaults,
 			});
 			this.functions.push(apiFn.fn);
 		}
