@@ -1,0 +1,23 @@
+import { AxiosResponse } from 'axios';
+import { <%= serviceName %> } from '../<%= serviceName %>';
+import { <%= serviceName %>Response } from '../types/base-response';
+import { isResponseSuccessful } from './is-response-successful';
+
+export function buildApiResponse<T>(
+	this: <%= serviceName %>,
+	response: AxiosResponse,
+): <%= serviceName %>Response<T> {
+	if (isResponseSuccessful(response.status)) {
+		return {
+			wasSuccessful: true,
+			code: response.status,
+			body: response.data,
+		};
+	}
+
+	return {
+		wasSuccessful: false,
+		code: response.status,
+		message: response.data,
+	};
+}

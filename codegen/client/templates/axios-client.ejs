@@ -1,0 +1,10 @@
+import axios from 'axios';
+
+export const axiosClient = axios.create({
+	baseURL: <%= baseURL %>,
+	responseType: 'json',
+	validateStatus: () => true,
+	headers: {
+		'Content-Type': 'application/json',
+	},
+});

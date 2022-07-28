@@ -7,30 +7,22 @@ import fs from 'fs';
 import { printNode, zodToTs } from 'zod-to-ts';
 import { z } from 'zod';
 
-const getPackageJson = ({ packageName }: { packageName: string }) => {
-	return ejs.renderFile('codegen/client/templates/package.ejs', {
-		packageName,
-	});
-};
-
-const getTSConfig = () => {
-	return ejs.renderFile('codegen/client/templates/tsconfig.ejs');
-};
-
-const getServiceClass = ({
+const writeServiceClass = async ({
 	serviceName,
 	handlers,
 }: {
 	serviceName: string;
 	handlers: FullHandlerDefinition<ApiHandlerDefinition<never, never, never>>[];
 }) => {
-	return ejs.renderFile('codegen/client/templates/class.ejs', {
+	const code = await ejs.renderFile('codegen/client/templates/class.ejs', {
 		serviceName,
 		functionNames: handlers.map(({ name }) => camelCase(name)),
 	});
+
+	await fs.writeFileSync(`client/src/${serviceName}.ts`, code);
 };
 
-const getRequestCode = ({
+const writeRequestCode = async ({
 	serviceName,
 	handler,
 }: {
@@ -60,7 +52,7 @@ const getRequestCode = ({
 		responseSchema = handler.schemas.response;
 	}
 
-	return ejs.renderFile('codegen/client/templates/request.ejs', {
+	const code = await ejs.renderFile('codegen/client/templates/request.ejs', {
 		serviceName,
 		functionName: camelCase(handler.name),
 		requestName: pascalCase(`${handler.name}Request`),
@@ -70,12 +62,27 @@ const getRequestCode = ({
 		route: handler.route.replace(/{/g, '${'),
 		method: handler.method,
 	});
+
+	await fs.writeFileSync(
+		`client/src/requests/${camelCase(handler.name)}.ts`,
+		code,
+	);
 };
 
-const getMakeRequest = ({ serviceName }: { serviceName: string }) => {
-	return ejs.renderFile('codegen/client/templates/make-request.ejs', {
-		serviceName,
-	});
+const writeTemplateFile = async ({
+	data,
+	template,
+	output,
+}: {
+	data: { serviceName: string; packageName: string };
+	template: string;
+	output: string;
+}) => {
+	const code = await ejs.renderFile(
+		`codegen/client/templates/${template}`,
+		data,
+	);
+	await fs.writeFileSync(output, code);
 };
 
 async function generateClient() {
@@ -88,28 +95,72 @@ async function generateClient() {
 
 	await fs.rmSync('client', { recursive: true, force: true });
 
-	await fs.mkdirSync('client');
-	await fs.mkdirSync('client/src');
-	await fs.mkdirSync('client/src/requests');
-	await fs.mkdirSync('client/src/helpers');
+	/**
+	 * Prep client directory
+	 */
+	await Promise.all([
+		fs.mkdirSync('client'),
+		fs.mkdirSync('client/src'),
+		fs.mkdirSync('client/src/requests'),
+		fs.mkdirSync('client/src/helpers'),
+		fs.mkdirSync('client/src/types'),
+	]);
 
-	const classCode = await getServiceClass({ serviceName, handlers });
-	await fs.writeFileSync(`client/src/${serviceName}.ts`, classCode);
-	const packageCode = await getPackageJson({ packageName: '@tailwind/test' });
-	await fs.writeFileSync('client/package.json', packageCode);
-	const tsconfigCode = await getTSConfig();
-	await fs.writeFileSync('client/tsconfig.json', tsconfigCode);
-	const makeRequest = await getMakeRequest({ serviceName });
-	await fs.writeFileSync('client/src/helpers/make-request.ts', makeRequest);
+	/**
+	 * Write necessary helper files
+	 */
+	const data = {
+		serviceName,
+		packageName: '@tailwind/test',
+		baseURL: 'https://test.tailwindapp.net',
+	};
+	await Promise.all([
+		writeServiceClass({ serviceName, handlers }),
+		writeTemplateFile({
+			template: 'tsconfig.ejs',
+			output: 'client/tsconfig.json',
+			data,
+		}),
+		writeTemplateFile({
+			template: 'package.ejs',
+			output: 'client/package.json',
+			data,
+		}),
+		writeTemplateFile({
+			template: 'base-response.ejs',
+			output: 'client/src/types/base-response.ts',
+			data,
+		}),
+		writeTemplateFile({
+			template: 'make-request.ejs',
+			output: 'client/src/helpers/make-request.ts',
+			data,
+		}),
+		writeTemplateFile({
+			template: 'is-response-successful.ejs',
+			output: 'client/src/helpers/is-response-successful.ts',
+			data,
+		}),
+		writeTemplateFile({
+			template: 'build-response.ejs',
+			output: 'client/src/helpers/build-response.ts',
+			data,
+		}),
+		writeTemplateFile({
+			template: 'axios-client.ejs',
+			output: 'client/src/helpers/axios-client.ts',
+			data,
+		}),
+	]);
 
-	const promises = Object.values(handlers).map(async (handler) => {
-		const code = await getRequestCode({ serviceName, handler });
-		await fs.writeFileSync(
-			`client/src/requests/${camelCase(handler.name)}.ts`,
-			code,
-		);
-	});
-	await Promise.all(promises);
+	/**
+	 * Write request code
+	 */
+	await Promise.all(
+		Object.values(handlers).map(
+			async (handler) => await writeRequestCode({ serviceName, handler }),
+		),
+	);
 }
 
 generateClient();

@@ -1,0 +1,18 @@
+export interface <%= serviceName %>BaseResponse {
+	wasSuccessful: boolean;
+	code: number;
+}
+
+export interface <%= serviceName %>SuccessResponse<T> extends <%= serviceName %>BaseResponse {
+	wasSuccessful: true;
+	code: number;
+	body: T;
+}
+
+export interface <%= serviceName %>FailedResponse extends <%= serviceName %>BaseResponse {
+	wasSuccessful: false;
+	code: number;
+	message: string;
+}
+
+export type <%= serviceName %>Response<T> = <%= serviceName %>SuccessResponse<T> | <%= serviceName %>FailedResponse;
