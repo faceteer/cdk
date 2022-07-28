@@ -2,17 +2,16 @@ import { <%= serviceName %> } from '../<%= serviceName %>';
 import { <%= serviceName %>Response } from '../types/base-response';
 
 export type <%= requestName %> = <%= requestType %>;
+
 export type <%= responseName %> = <%= responseType %>;
 
 export async function <%= functionName %>(
 	this: <%= serviceName %>,
 	request: <%= requestName %>,
 ): Promise<<%= serviceName %>Response<<%= responseName %>>> {
-	const { userId, ...data } = request;
+	<%= requestSupplier %>
 	return this.makeRequest<<%= responseName %>>({
 		method: '<%= method %>',
 		url: `<%= route %>`,
-		data,
-		params: { userId },
 	});
 }
