@@ -9,9 +9,12 @@ export async function <%= functionName %>(
 	this: <%= serviceName %>,
 	request: <%= requestName %>,
 ): Promise<<%= serviceName %>Response<<%= responseName %>>> {
-	<%= requestSupplier %>
+	const data = <%= dataObject %>;
+	const params = <%= paramsObject %>;
 	return this.makeRequest<<%= responseName %>>({
 		method: '<%= method %>',
 		url: `<%= route %>`,
+		data,
+		params,
 	});
 }

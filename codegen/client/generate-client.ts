@@ -6,29 +6,38 @@ import { ApiHandlerDefinition } from '../../handlers';
 import fs from 'fs';
 import { printNode, zodToTs } from 'zod-to-ts';
 import { z } from 'zod';
+import glob from 'glob';
 
 const writeServiceClass = async ({
 	serviceName,
 	handlers,
+	filesToRemove,
 }: {
 	serviceName: string;
 	handlers: FullHandlerDefinition<ApiHandlerDefinition<never, never, never>>[];
+	filesToRemove: string[];
 }) => {
+	if (!filesToRemove.includes(`client/src/${serviceName}.ts`)) return;
 	const code = await ejs.renderFile('codegen/client/templates/class.ejs', {
 		serviceName,
 		functionNames: handlers.map(({ name }) => camelCase(name)),
 	});
 
-	await fs.writeFileSync(`client/src/${serviceName}.ts`, code);
+	fs.writeFileSync(`client/src/${serviceName}.ts`, code);
 };
 
 const writeRequestCode = async ({
 	serviceName,
 	handler,
+	filesToRemove,
 }: {
 	serviceName: string;
 	handler: FullHandlerDefinition<ApiHandlerDefinition<never, never, never>>;
+	filesToRemove: string[];
 }) => {
+	const output = `client/src/requests/${camelCase(handler.name)}.ts`;
+	if (!filesToRemove.includes(output)) return;
+
 	let requestSchema = z.object({});
 	let responseSchema = z.object({});
 
@@ -52,21 +61,47 @@ const writeRequestCode = async ({
 		responseSchema = handler.schemas.response;
 	}
 
-	const code = await ejs.renderFile('codegen/client/templates/request.ejs', {
+	const queryKeys = Object.keys(handler?.schemas?.query?.shape ?? {});
+	const bodyKeys = Object.keys(handler?.schemas?.body?.shape ?? {});
+
+	let dataObject = '';
+	for (const key of bodyKeys) {
+		dataObject += `\n		${key}: request.${key},`;
+	}
+	if (bodyKeys.length === 0) dataObject = '{}';
+	else dataObject = `{${dataObject}\n	}`;
+
+	let paramsObject = '';
+	for (const key of queryKeys) {
+		paramsObject += `\n		${key}: request?.${key},`;
+	}
+	if (queryKeys.length === 0) paramsObject = '{}';
+	else paramsObject = `{${paramsObject}\n	}`;
+
+	const requestName = pascalCase(`${handler.name}Request`);
+	const requestType = printNode(zodToTs(requestSchema).node).replace(
+		/ {4}/g,
+		'	',
+	);
+
+	let code = await ejs.renderFile('codegen/client/templates/request.ejs', {
 		serviceName,
 		functionName: camelCase(handler.name),
-		requestName: pascalCase(`${handler.name}Request`),
-		requestType: printNode(zodToTs(requestSchema).node).replace(/ {4}/g, '	'),
+		requestName,
+		requestType,
 		responseName: pascalCase(`${handler.name}Response`),
 		responseType: printNode(zodToTs(responseSchema).node).replace(/ {4}/g, '	'),
-		route: handler.route.replace(/{/g, '${'),
+		route: handler.route.replace(/{/g, '${request.'),
 		method: handler.method,
+		dataObject,
+		paramsObject,
 	});
 
-	await fs.writeFileSync(
-		`client/src/requests/${camelCase(handler.name)}.ts`,
-		code,
-	);
+	if (requestType === '{}') {
+		code = code.replace(`\n	request: ${requestName},`, '');
+	}
+
+	fs.writeFileSync(output, code);
 };
 
 const writeTemplateFile = async ({
@@ -74,37 +109,54 @@ const writeTemplateFile = async ({
 	template,
 	output,
 }: {
-	data: { serviceName: string; packageName: string };
+	data: { serviceName: string; packageName: string; filesToRemove: string[] };
 	template: string;
 	output: string;
 }) => {
+	if (!data.filesToRemove.includes(output)) return;
 	const code = await ejs.renderFile(
 		`codegen/client/templates/${template}`,
 		data,
 	);
-	await fs.writeFileSync(output, code);
+	fs.writeFileSync(output, code);
 };
+
+const ConfigSchema = z.object({ exclude: z.array(z.string()).optional() });
 
 async function generateClient() {
 	const { api } = extractHandlers(path.join(__dirname, '../../fixtures/'));
 	const handlers = Object.values(api);
+
 	handlers.forEach((handler) => {
 		handler.name = handler.name.replace('Api', '');
 	});
 	const serviceName = pascalCase('Test');
 
-	await fs.rmSync('client', { recursive: true, force: true });
+	const doesConfigExist = fs.existsSync('client/faceteer.json');
+	const excludedFiles = ['client/faceteer.json'];
+	if (doesConfigExist) {
+		const rawConfig = fs.readFileSync('client/faceteer.json');
+		const config = ConfigSchema.parse(JSON.parse(rawConfig.toString()));
+		for (const file of config.exclude ?? []) {
+			excludedFiles.push(`client/${file}`);
+		}
+	}
+	const filesToRemove = glob.sync('client/**/*', {
+		ignore: excludedFiles,
+		nodir: true,
+	});
+	filesToRemove.map(fs.unlinkSync);
+	console.log(filesToRemove);
 
 	/**
 	 * Prep client directory
 	 */
-	await Promise.all([
-		fs.mkdirSync('client'),
-		fs.mkdirSync('client/src'),
-		fs.mkdirSync('client/src/requests'),
-		fs.mkdirSync('client/src/helpers'),
-		fs.mkdirSync('client/src/types'),
-	]);
+	if (!fs.existsSync('client')) fs.mkdirSync('client');
+	if (!fs.existsSync('client/src')) fs.mkdirSync('client/src');
+	if (!fs.existsSync('client/src/requests'))
+		fs.mkdirSync('client/src/requests');
+	if (!fs.existsSync('client/src/helpers')) fs.mkdirSync('client/src/helpers');
+	if (!fs.existsSync('client/src/types')) fs.mkdirSync('client/src/types');
 
 	/**
 	 * Write necessary helper files
@@ -113,52 +165,52 @@ async function generateClient() {
 		serviceName,
 		packageName: '@tailwind/test',
 		baseURL: 'https://test.tailwindapp.net',
+		filesToRemove,
 	};
-	await Promise.all([
-		writeServiceClass({ serviceName, handlers }),
-		writeTemplateFile({
-			template: 'tsconfig.ejs',
-			output: 'client/tsconfig.json',
-			data,
-		}),
-		writeTemplateFile({
-			template: 'package.ejs',
-			output: 'client/package.json',
-			data,
-		}),
-		writeTemplateFile({
-			template: 'base-response.ejs',
-			output: 'client/src/types/base-response.ts',
-			data,
-		}),
-		writeTemplateFile({
-			template: 'make-request.ejs',
-			output: 'client/src/helpers/make-request.ts',
-			data,
-		}),
-		writeTemplateFile({
-			template: 'is-response-successful.ejs',
-			output: 'client/src/helpers/is-response-successful.ts',
-			data,
-		}),
-		writeTemplateFile({
-			template: 'build-response.ejs',
-			output: 'client/src/helpers/build-response.ts',
-			data,
-		}),
-		writeTemplateFile({
-			template: 'axios-client.ejs',
-			output: 'client/src/helpers/axios-client.ts',
-			data,
-		}),
-	]);
+	writeServiceClass({ serviceName, handlers, filesToRemove });
+	writeTemplateFile({
+		template: 'tsconfig.ejs',
+		output: 'client/tsconfig.json',
+		data,
+	});
+	writeTemplateFile({
+		template: 'package.ejs',
+		output: 'client/package.json',
+		data,
+	});
+	writeTemplateFile({
+		template: 'base-response.ejs',
+		output: 'client/src/types/base-response.ts',
+		data,
+	});
+	writeTemplateFile({
+		template: 'make-request.ejs',
+		output: 'client/src/helpers/make-request.ts',
+		data,
+	});
+	writeTemplateFile({
+		template: 'is-response-successful.ejs',
+		output: 'client/src/helpers/is-response-successful.ts',
+		data,
+	});
+	writeTemplateFile({
+		template: 'build-response.ejs',
+		output: 'client/src/helpers/build-response.ts',
+		data,
+	});
+	writeTemplateFile({
+		template: 'axios-client.ejs',
+		output: 'client/src/helpers/axios-client.ts',
+		data,
+	});
 
 	/**
 	 * Write request code
 	 */
 	await Promise.all(
 		Object.values(handlers).map(
-			async (handler) => await writeRequestCode({ serviceName, handler }),
+			async (handler) =>
+				await writeRequestCode({ serviceName, handler, filesToRemove }),
 		),
 	);
 }

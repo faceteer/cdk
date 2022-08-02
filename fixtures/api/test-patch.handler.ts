@@ -3,7 +3,7 @@ import { ApiHandler } from '../../handlers/api-handler';
 import { SuccessResponse } from '../../response/success-response';
 
 const BodySchema = z.object({
-	userId: z.string().optional(),
+	userId: z.string(),
 	email: z.string().optional(),
 });
 
