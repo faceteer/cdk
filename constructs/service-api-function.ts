@@ -57,11 +57,9 @@ export class ServiceApiFunction extends Construct {
 			description: definition.description,
 			memorySize: definition.memorySize ?? defaults?.memorySize ?? 192,
 			reservedConcurrentExecutions: definition.reservedConcurrentExecutions,
-			timeout: definition.timeout
-				? cdk.Duration.seconds(
-						Math.max(30, definition.timeout ?? defaults?.timeout),
-				  )
-				: undefined,
+			timeout: cdk.Duration.seconds(
+				Math.max(30, definition.timeout ?? defaults?.timeout ?? 3),
+			),
 			role: role,
 			bundling: {
 				...bundlingOptions,
