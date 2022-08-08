@@ -109,6 +109,14 @@ export interface SendMessagesOptions<T> {
 	 * Max 900
 	 */
 	randomDelay?: number;
+	/** If true, the message is sent directly to the DLQ.
+	 *
+	 * When enabled, the message is never tried to be delivered through the
+	 * regular queue. Instead it's sent directly to the DLQ.
+	 *
+	 * @default false
+	 */
+	directlyToDLQ?: boolean;
 }
 
 /**
@@ -224,6 +232,7 @@ export class QueueManager {
 			concurrentRequestLimit = 2,
 			uniqueKey,
 			randomDelay,
+			directlyToDLQ,
 		}: SendMessagesOptions<T> = {},
 	): Promise<QueueResults<T>> {
 		const uris = this.getUris(queueName);
@@ -335,7 +344,7 @@ export class QueueManager {
 			const entries = Array.from(batch.values());
 			const command = new SendMessageBatchCommand({
 				Entries: entries,
-				QueueUrl: uris.uri,
+				QueueUrl: directlyToDLQ ? uris.dlq : uris.uri,
 			});
 			const batchRequest = limit(() => sqs.send(command));
 			batchPromises.push(batchRequest);
