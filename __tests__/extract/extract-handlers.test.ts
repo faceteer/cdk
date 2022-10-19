@@ -62,7 +62,7 @@ describe('Parse Handlers', () => {
 				timeout: 900,
 				isFifoQueue: true,
 				maximumAttempts: 10,
-				name: 'QueueUpdateUser',
+				name: 'QueueCreateUser',
 				path: `${basePath}queue/test-fifo-queue.handler.ts`,
 			},
 			QueueUpdateUser: {
