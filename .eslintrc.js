@@ -13,7 +13,12 @@ module.exports = {
 		'valid-jsdoc': 'off',
 		semi: 'off',
 		'no-unused-vars': 'off',
-		'@typescript-eslint/no-unused-vars': 'error',
+		'@typescript-eslint/no-unused-vars': [
+			'error',
+			{
+				argsIgnorePattern: '^_',
+			},
+		],
 		'no-dupe-class-members': 'off',
 		'new-cap': 'off',
 		'prettier/prettier': [

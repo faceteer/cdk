@@ -14,9 +14,11 @@ import * as crypto from 'crypto';
 import pLimit from 'p-limit';
 import { AsyncHandler, HandlerDefinition, HandlerTypes } from './handler';
 import {
+	FifoMessage,
 	InvalidMessage,
 	isFifoMessage,
 	Message,
+	StandardMessage,
 	ValidatedMessage,
 } from './message';
 
@@ -128,8 +130,8 @@ export interface SendMessagesOptions<T> {
 /**
  * A function that sends messages to a queue
  */
-export type QueueSender<T> = (
-	messages: Message<T>[],
+export type QueueSender<T, M extends Message<T>> = (
+	messages: M[],
 	options?: SendMessagesOptions<T>,
 ) => Promise<QueueResults<T>>;
 
@@ -213,7 +215,19 @@ export class QueueManager {
 	static generateQueueSender<T>(
 		sqs: SQSClient,
 		queueName: string,
-	): QueueSender<T> {
+		_senderOptions?: { isFifoQueue: false },
+	): QueueSender<T, StandardMessage<T>>;
+	static generateQueueSender<T>(
+		sqs: SQSClient,
+		queueName: string,
+		_senderOptions?: { isFifoQueue: true },
+	): QueueSender<T, FifoMessage<T>>;
+	static generateQueueSender<T>(
+		sqs: SQSClient,
+		queueName: string,
+		// `isFifoQueue` is not used in Javascript, only to trick Typescript as to what kind of messages it expects
+		_senderOptions?: { isFifoQueue: boolean },
+	): QueueSender<T, Message<T>> {
 		return (messages, options) => {
 			return this.send<T>(sqs, queueName, messages, options);
 		};
