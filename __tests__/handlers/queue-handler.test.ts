@@ -11,7 +11,7 @@ import type {
 	SQSClient,
 } from '@aws-sdk/client-sqs';
 import { SQSRecord } from 'aws-lambda';
-import { Message } from '../../handlers/message';
+import { isFifoMessage, Message } from '../../handlers/message';
 
 const mockSend = jest.fn(
 	async (command: SendMessageBatchCommand): Promise<SendMessageBatchResult> => {
@@ -214,11 +214,86 @@ describe('Queue Handler', () => {
 			sqs,
 			'test-queue',
 			pullUserEvents,
+			{ uniqueKey: 'userId' },
 		);
 
 		expect(result.Sent.length).toBe(900);
 		expect(result.Failed.length).toBe(100);
 		expect(mockSend).toBeCalledTimes(100);
+
+		for (let index = 0; index < 100; index++) {
+			const messages = pullUserEvents.slice(index * 10, index * 10 + 10);
+			for (const message of messages) {
+				expect(isFifoMessage(message)).toBe(false);
+			}
+			expect(mockSend.mock.calls[index][0].input).toEqual({
+				Entries: messages.map((message) => ({
+					DelaySeconds: 0,
+					Id: message.body.userId,
+					MessageAttributes: {
+						attempts: { DataType: 'Number', StringValue: '1' },
+					},
+					MessageBody: JSON.stringify(message.body),
+				})),
+				QueueUrl: QueueManager.getUris('test-queue').uri,
+			});
+		}
+	});
+
+	test('Queue Batches Fifo Items', async () => {
+		const pullUserEvents: Message<PullUserEvent>[] = [];
+
+		for (let index = 0; index < 1000; index++) {
+			if (index >= 900) {
+				pullUserEvents.push({
+					attempts: 0,
+					body: { userId: `${index}-failed`, token: Date.now().toString(16) },
+					groupId: `${index}-group-id`,
+					deduplicationId: `${index}-deduplication-id`,
+				});
+			} else {
+				pullUserEvents.push({
+					attempts: 0,
+					body: { userId: `${index}`, token: Date.now().toString(16) },
+					groupId: `${index}-id`,
+					deduplicationId: `${index}-deduplication-id`,
+				});
+			}
+		}
+
+		const result = await QueueManager.send<PullUserEvent>(
+			sqs,
+			'test-queue',
+			pullUserEvents,
+			{ uniqueKey: 'userId' },
+		);
+
+		expect(result.Sent.length).toBe(900);
+		expect(result.Failed.length).toBe(100);
+		expect(mockSend).toBeCalledTimes(100);
+		for (let index = 0; index < 100; index++) {
+			const messages = pullUserEvents.slice(index * 10, index * 10 + 10);
+			for (const message of messages) {
+				expect(isFifoMessage(message)).toBe(true);
+			}
+			expect(mockSend.mock.calls[index][0].input).toEqual({
+				Entries: messages.map((message) => ({
+					DelaySeconds: 0,
+					Id: message.body.userId,
+					MessageAttributes: {
+						attempts: { DataType: 'Number', StringValue: '1' },
+					},
+					MessageBody: JSON.stringify(message.body),
+					MessageDeduplicationId: isFifoMessage(message)
+						? message.deduplicationId
+						: 'IMPOSSIBLE',
+					MessageGroupId: isFifoMessage(message)
+						? message.groupId
+						: 'IMPOSSIBLE',
+				})),
+				QueueUrl: QueueManager.getUris('test-queue').uri,
+			});
+		}
 	});
 });
 

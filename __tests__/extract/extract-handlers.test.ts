@@ -65,6 +65,15 @@ describe('Parse Handlers', () => {
 				name: 'QueueUpdateUser',
 				path: `${basePath}queue/test-queue.handler.ts`,
 			},
+			QueueCreateUser: {
+				queueName: 'createUser',
+				memorySize: 1024,
+				timeout: 900,
+				isFifoQueue: true,
+				maximumAttempts: 10,
+				name: 'QueueUpdateUser',
+				path: `${basePath}queue/test-fifo-queue.handler.ts`,
+			},
 		});
 
 		expect(handlers.cron).toEqual({

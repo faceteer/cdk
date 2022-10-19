@@ -48,6 +48,7 @@ export class ServiceQueueFunction extends Construct {
 			retentionPeriod: cdk.Duration.days(14),
 			receiveMessageWaitTime: cdk.Duration.seconds(20),
 			visibilityTimeout: timeout,
+			fifo: definition.isFifoQueue,
 		});
 
 		this.dlq.grantSendMessages(role);
@@ -57,6 +58,7 @@ export class ServiceQueueFunction extends Construct {
 			retentionPeriod: cdk.Duration.days(14),
 			receiveMessageWaitTime: cdk.Duration.seconds(20),
 			visibilityTimeout: timeout,
+			fifo: definition.isFifoQueue,
 			deadLetterQueue: {
 				maxReceiveCount: maximumAttempts,
 				queue: this.dlq,

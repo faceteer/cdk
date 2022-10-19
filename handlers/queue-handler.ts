@@ -13,7 +13,12 @@ import { constantCase } from 'constant-case';
 import * as crypto from 'crypto';
 import pLimit from 'p-limit';
 import { AsyncHandler, HandlerDefinition, HandlerTypes } from './handler';
-import type { InvalidMessage, Message, ValidatedMessage } from './message';
+import {
+	InvalidMessage,
+	isFifoMessage,
+	Message,
+	ValidatedMessage,
+} from './message';
 
 export interface QueueHandlerDefinition extends HandlerDefinition {
 	/**
@@ -22,10 +27,17 @@ export interface QueueHandlerDefinition extends HandlerDefinition {
 	queueName: string;
 
 	/**
+	 * Whether the queue is a fifo queue https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues.html
+	 */
+	isFifoQueue?: boolean;
+
+	/**
 	 * The largest number of records that AWS Lambda will retrieve from your event source at the time of invoking your function.
 	 *
 	 * Valid Range: Minimum value of 1. Maximum value of 10.
 	 * If `maxBatchingWindow` is configured, this value can go up to 10,000.
+	 *
+	 * (forbidden if `isFifoQueue` is true)
 	 *
 	 * @default 10
 	 */
@@ -35,6 +47,8 @@ export interface QueueHandlerDefinition extends HandlerDefinition {
 	 * The maximum amount of time to gather records before invoking the function.
 	 *
 	 * Valid Range: Minimum value of 0 minutes. Maximum value of 5 minutes.
+	 *
+	 * (forbidden if `isFifoQueue` is true)
 	 *
 	 * @default - no batching window. The lambda function will be invoked immediately with the records that are available.
 	 */
@@ -315,6 +329,10 @@ export class QueueManager {
 			currentBatch.set(id, {
 				MessageBody: body,
 				Id: id,
+				MessageGroupId: isFifoMessage(message) ? message.groupId : undefined,
+				MessageDeduplicationId: isFifoMessage(message)
+					? message.deduplicationId
+					: undefined,
 				DelaySeconds: delay,
 				MessageAttributes: {
 					attempts: {
