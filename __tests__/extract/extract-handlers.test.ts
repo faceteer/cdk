@@ -56,15 +56,6 @@ describe('Parse Handlers', () => {
 		});
 
 		expect(handlers.queue).toEqual({
-			QueueUpdateUser: {
-				queueName: 'updateUser',
-				memorySize: 1024,
-				timeout: 900,
-				maxBatchingWindow: 10,
-				maximumAttempts: 10,
-				name: 'QueueUpdateUser',
-				path: `${basePath}queue/test-queue.handler.ts`,
-			},
 			QueueCreateUser: {
 				queueName: 'createUser',
 				memorySize: 1024,
@@ -73,6 +64,15 @@ describe('Parse Handlers', () => {
 				maximumAttempts: 10,
 				name: 'QueueUpdateUser',
 				path: `${basePath}queue/test-fifo-queue.handler.ts`,
+			},
+			QueueUpdateUser: {
+				queueName: 'updateUser',
+				memorySize: 1024,
+				timeout: 900,
+				maxBatchingWindow: 10,
+				maximumAttempts: 10,
+				name: 'QueueUpdateUser',
+				path: `${basePath}queue/test-queue.handler.ts`,
 			},
 		});
 
