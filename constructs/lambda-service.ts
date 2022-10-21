@@ -46,7 +46,7 @@ export interface LambdaServiceProps {
 		route53Zone?: route53.IHostedZone;
 	};
 	/**
-	 * Use the key to reference the appropriate event bus in your Queue Handler definition.
+	 * Use the key to reference the appropriate event bus in your Event Handler definition.
 	 */
 	eventBuses?: { [key: string]: events.IEventBus };
 }
