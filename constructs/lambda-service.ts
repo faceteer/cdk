@@ -45,7 +45,10 @@ export interface LambdaServiceProps {
 		domainName: string;
 		route53Zone?: route53.IHostedZone;
 	};
-	eventBuses?: events.IEventBus[];
+	/**
+	 * Use the key to reference the appropriate event bus in your Queue Handler definition.
+	 */
+	eventBuses?: { [key: string]: events.IEventBus };
 }
 
 export class LambdaService extends Construct implements iam.IGrantable {
@@ -253,9 +256,16 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				);
 			}
 
-			let eventBus = eventBuses[0];
-			if (eventHandler.eventBusName) {
-				const matchedEventBus = eventBuses.find(
+			let eventBus: events.IEventBus;
+			if (!eventHandler.eventBusName) {
+				// Default to first event bus if not specified in handler
+				eventBus = Object.values(eventBuses)[0];
+			} else if (eventBuses[eventHandler.eventBusName]) {
+				// Treated `eventBusName` as a key to reference configured event buses
+				eventBus = eventBuses[eventHandler.eventBusName];
+			} else {
+				// Treated `eventBusName` as the aws event bus name
+				const matchedEventBus = Object.values(eventBuses).find(
 					(bus) => bus.eventBusName === eventHandler.eventBusName,
 				);
 				if (!matchedEventBus) {
