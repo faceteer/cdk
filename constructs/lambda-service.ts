@@ -257,10 +257,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			}
 
 			let eventBus: events.IEventBus;
-			if (!eventHandler.eventBusName) {
-				// Default to first event bus if not specified in handler
-				eventBus = Object.values(eventBuses)[0];
-			} else if (eventBuses[eventHandler.eventBusName]) {
+			if (eventBuses[eventHandler.eventBusName]) {
 				// Treated `eventBusName` as a key to reference configured event buses
 				eventBus = eventBuses[eventHandler.eventBusName];
 			} else {

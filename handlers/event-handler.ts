@@ -10,9 +10,8 @@ export interface EventHandlerDefinition extends HandlerDefinition {
 
 	/**
 	 * Uses event bus name that is provided and configured within stack.
-	 * If no name is specified, the first bus listed in the CDK configuration is used.
 	 */
-	eventBusName?: string;
+	eventBusName: string;
 
 	/**
 	 * The event pattern in which to subscribe to.
