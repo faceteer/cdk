@@ -12,6 +12,7 @@ export const handler = EventHandler(
 		eventPattern: {
 			detailType: ['Some user was added type'],
 		},
+		eventBusName: 'event-bus-name',
 		memorySize: 1024,
 		timeout: 900,
 		validator: (body) => {

@@ -27,6 +27,7 @@ describe('Event Handler', () => {
 			{
 				name: 'test-event',
 				eventPattern: { detailType: ['test'] },
+				eventBusName: 'event-bus-name',
 				validator: (body) => {
 					return body as EventBridgeEvent<string, AddedUserEvent>;
 				},
@@ -54,6 +55,7 @@ describe('Event Handler', () => {
 				eventPattern: {
 					detailType: ['test'],
 				},
+				eventBusName: 'event-bus-name',
 				validator: (detail) => {
 					if ('userId' in detail && 'token' in detail) {
 						return detail as EventBridgeEvent<string, AddedUserEvent>;
