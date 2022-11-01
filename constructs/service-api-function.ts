@@ -98,6 +98,10 @@ export class ServiceApiFunction extends Construct {
 			payloadFormatVersion: '2.0',
 		});
 
+		integration.overrideLogicalId(
+			`ServiceApiIntegration-${definition.method}-${definition.route}`,
+		);
+
 		this.route = new apigwv2.CfnRoute(this, `Route`, {
 			apiId: httpApi.ref,
 			routeKey: `${definition.method} ${definition.route}`,
@@ -109,5 +113,8 @@ export class ServiceApiFunction extends Construct {
 					? undefined
 					: definition.scopes ?? defaults?.scopes ?? defaultScopes,
 		});
+		this.route.overrideLogicalId(
+			`ServiceApiRoute-${definition.method}-${definition.route}`,
+		);
 	}
 }
