@@ -8,6 +8,7 @@ import { Construct } from 'constructs';
 import type { HandlerNameAndPath } from '../extract/extract-handlers';
 import type { ApiHandlerDefinition } from '../handlers/api-handler';
 import { LambdaServiceProps } from './lambda-service';
+import { routeToAlphaNumeric } from '../util/route-to-alphanumeric';
 
 export interface ServiceApiFunctionProps {
 	role: iam.IRole;
@@ -74,6 +75,12 @@ export class ServiceApiFunction extends Construct {
 			layers,
 		});
 
+		if (definition.cfnOverrides?.logicalIds?.function) {
+			(this.fn.node.defaultChild as lambda.CfnFunction).overrideLogicalId(
+				definition.cfnOverrides?.logicalIds?.function,
+			);
+		}
+
 		new logs.LogGroup(this, 'LogGroup', {
 			logGroupName: `/aws/lambda/${this.fn.functionName}`,
 			removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -99,9 +106,11 @@ export class ServiceApiFunction extends Construct {
 		});
 
 		integration.overrideLogicalId(
-			`ServiceApiIntegration-${definition.method}-${definition.route}`,
+			definition.cfnOverrides?.logicalIds?.integration ??
+				`ServiceApiIntegration${definition.method}${routeToAlphaNumeric(
+					definition.route,
+				)}`,
 		);
-
 		this.route = new apigwv2.CfnRoute(this, `Route`, {
 			apiId: httpApi.ref,
 			routeKey: `${definition.method} ${definition.route}`,
@@ -114,7 +123,10 @@ export class ServiceApiFunction extends Construct {
 					: definition.scopes ?? defaults?.scopes ?? defaultScopes,
 		});
 		this.route.overrideLogicalId(
-			`ServiceApiRoute-${definition.method}-${definition.route}`,
+			definition.cfnOverrides?.logicalIds?.route ??
+				`ServiceApiRoute${definition.method}${routeToAlphaNumeric(
+					definition.route,
+				)}`,
 		);
 	}
 }
