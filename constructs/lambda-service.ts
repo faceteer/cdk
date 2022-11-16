@@ -85,6 +85,9 @@ export class LambdaService extends Construct implements iam.IGrantable {
 	readonly grantPrincipal: iam.IPrincipal;
 	readonly authorizer?: apigwv2.CfnAuthorizer;
 
+	/** Maps queue names to the queue handlers of this service, if any. */
+	public queues: Map<string, ServiceQueueFunction> = new Map();
+
 	public functions: lambda.Function[] = [];
 	private environmentVariables: Map<string, string> = new Map();
 	private snsTopics: Map<string, sns.Topic> = new Map();
@@ -233,6 +236,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				bundlingOptions,
 			});
 			this.functions.push(queueFn.fn);
+			this.queues.set(queueFn.queue.queueName, queueFn);
 
 			this.environmentVariables.set(
 				queueFn.queueEnvironmentVariable,
