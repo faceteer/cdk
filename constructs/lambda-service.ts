@@ -29,7 +29,14 @@ import {
 import { CfnAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2';
 
 export interface LambdaServiceProps {
-	handlersFolder: string;
+	/** The path to the folder where the handlers are stored.
+	 *
+	 * If omitted, then the service will have no handlers. This can be useful if
+	 * you want to create a dummy service that will contain all the resources you
+	 * may need like an api gateway, which you can then pass into other actual
+	 * services.
+	 */
+	handlersFolder?: string;
 	/** The API gateway that the API handlers in this service should be attached
 	 * to.
 	 *
@@ -157,7 +164,9 @@ export class LambdaService extends Construct implements iam.IGrantable {
 		/**
 		 * Get all handler information from handlers
 		 */
-		const handlers = extractHandlers(handlersFolder);
+		const handlers: ReturnType<typeof extractHandlers> = handlersFolder
+			? extractHandlers(handlersFolder)
+			: { api: {}, notification: {}, queue: {}, cron: {}, event: {} };
 
 		if (domain) {
 			const { certificate, domainName, route53Zone } = domain;
