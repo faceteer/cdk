@@ -354,12 +354,14 @@ export class LambdaService extends Construct implements iam.IGrantable {
 	 * This is only necessary if you are sending messages across services.
 	 * The service always has access to its own queues.
 	 */
-	public sendToQueue(queueFn: ServiceQueueFunction) {
+	public grantSendToQueue(queueFn: ServiceQueueFunction) {
 		this.addEnvironment(
 			queueFn.queueEnvironmentVariable,
 			queueFn.queue.queueName,
 		);
+		this.addEnvironment(queueFn.dlqEnvironmentVariable, queueFn.dlq.queueName);
 		queueFn.queue.grantSendMessages(this);
+		queueFn.dlq.grantSendMessages(this);
 	}
 
 	/**
