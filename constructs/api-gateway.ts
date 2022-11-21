@@ -79,6 +79,12 @@ export function isLambdaAuthorizerConfig(
 	);
 }
 
+export function isJwtAuthorizerConfig(
+	config: LambdaAuthorizerConfig | JwtAuthorizerConfig | undefined,
+): config is JwtAuthorizerConfig {
+	return !!config && !isLambdaAuthorizerConfig(config);
+}
+
 export class LambdaAuthorizer extends CfnAuthorizer {
 	constructor(
 		scope: Construct,

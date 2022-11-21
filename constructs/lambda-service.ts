@@ -20,6 +20,7 @@ import { validatePathParameters } from '../util/validate-path-parameters';
 import {
 	ApiGateway,
 	ApiStage,
+	isJwtAuthorizerConfig,
 	isLambdaAuthorizerConfig,
 	JwtAuthorizer,
 	JwtAuthorizerConfig,
@@ -58,6 +59,18 @@ export interface LambdaServiceProps {
 	 * we'll create a new authorizer with that configuration.
 	 */
 	authorizer?: JwtAuthorizerConfig | LambdaAuthorizerConfig | CfnAuthorizer;
+	/** @deprecated Please use the same value on {@link authorizer} instead. */
+	jwtAuthorizer?: {
+		identitySource: string[];
+		audience: string[];
+		issuer: string;
+	};
+	/** @deprecated Please use the same value on {@link authorizer} instead. */
+	lambdaAuthorizer?: {
+		fn: lambda.IFunction;
+		identitySource: string[];
+		enableSimpleResponses?: boolean;
+	};
 	defaults?: {
 		scopes: string[];
 		memorySize: number;
@@ -98,6 +111,8 @@ export class LambdaService extends Construct implements iam.IGrantable {
 		{
 			handlersFolder,
 			authorizer,
+			jwtAuthorizer,
+			lambdaAuthorizer,
 			bundlingOptions = {},
 			role,
 			defaults,
@@ -144,6 +159,10 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			api ?? new ApiGateway(this, 'Api', { name: cdk.Names.uniqueId(this) });
 		this.stage = stage ?? new ApiStage(this, 'Stage', { api: this.api });
 
+		if (authorizer === undefined) {
+			// Keep backward compatibility
+			authorizer = lambdaAuthorizer ?? jwtAuthorizer;
+		}
 		/**
 		 * If an existing authorizer is provided, we'll use that. If not, we'll
 		 * create a new one with the given config.
@@ -156,7 +175,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				config: authorizer,
 				name: `${cdk.Names.uniqueId(this)}LambdaAuthorizer`,
 			});
-		} else if (authorizer !== undefined) {
+		} else if (isJwtAuthorizerConfig(authorizer)) {
 			this.authorizer = new JwtAuthorizer(this, 'Authorizer', {
 				api: this.api,
 				config: authorizer,
