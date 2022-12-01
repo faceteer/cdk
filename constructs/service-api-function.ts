@@ -62,9 +62,9 @@ export class ServiceApiFunction extends Construct {
 			),
 			role: role,
 			bundling: {
-				...bundlingOptions,
 				sourceMap: true,
 				sourceMapMode: lambdaNodeJs.SourceMapMode.INLINE,
+				...bundlingOptions,
 			},
 			environment: {
 				NODE_OPTIONS: '--enable-source-maps',

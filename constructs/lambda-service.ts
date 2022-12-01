@@ -17,14 +17,55 @@ import { ServiceQueueFunction } from './service-queue-function';
 import { ServiceCronFunction } from './service-cron-function';
 import { ServiceEventFunction } from './service-event-function';
 import { validatePathParameters } from '../util/validate-path-parameters';
+import {
+	ApiGateway,
+	ApiStage,
+	isJwtAuthorizerConfig,
+	isLambdaAuthorizerConfig,
+	JwtAuthorizer,
+	JwtAuthorizerConfig,
+	LambdaAuthorizer,
+	LambdaAuthorizerConfig,
+} from './api-gateway';
+import { CfnAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2';
 
 export interface LambdaServiceProps {
-	handlersFolder: string;
+	/** The path to the folder where the handlers are stored.
+	 *
+	 * If omitted, then the service will have no handlers. This can be useful if
+	 * you want to create a dummy service that will contain all the resources you
+	 * may need like an api gateway, which you can then pass into other actual
+	 * services.
+	 */
+	handlersFolder?: string;
+	/** The API gateway that the API handlers in this service should be attached
+	 * to.
+	 *
+	 * If this is not provided and the service includes API handlers, a new API
+	 * gateway will be created.
+	 */
+	api?: apigwv2.CfnApi;
+	/** The API gateway stage that the API handlers in this service should be
+	 * attached to.
+	 *
+	 * If this is not provided and the service includes API handlers, a new API
+	 * gateway stage will be created.
+	 */
+	stage?: apigwv2.CfnStage;
+	/** The Authorizer to use for the API handlers.
+	 *
+	 * This can either be an actual authorizer, in which case we'll use it. Or it
+	 * can be a configuration for either a Jwt or Lambda authorizer, in which case
+	 * we'll create a new authorizer with that configuration.
+	 */
+	authorizer?: JwtAuthorizerConfig | LambdaAuthorizerConfig | CfnAuthorizer;
+	/** @deprecated Please use the same value on {@link authorizer} instead. */
 	jwtAuthorizer?: {
 		identitySource: string[];
 		audience: string[];
 		issuer: string;
 	};
+	/** @deprecated Please use the same value on {@link authorizer} instead. */
 	lambdaAuthorizer?: {
 		fn: lambda.IFunction;
 		identitySource: string[];
@@ -55,6 +96,10 @@ export class LambdaService extends Construct implements iam.IGrantable {
 	readonly api: apigwv2.CfnApi;
 	readonly stage: apigwv2.CfnStage;
 	readonly grantPrincipal: iam.IPrincipal;
+	readonly authorizer?: apigwv2.CfnAuthorizer;
+
+	/** Maps queue names to the queue handlers of this service, if any. */
+	public queues: Map<string, ServiceQueueFunction> = new Map();
 
 	public functions: lambda.Function[] = [];
 	private environmentVariables: Map<string, string> = new Map();
@@ -65,14 +110,17 @@ export class LambdaService extends Construct implements iam.IGrantable {
 		id: string,
 		{
 			handlersFolder,
-			lambdaAuthorizer,
+			authorizer,
 			jwtAuthorizer,
+			lambdaAuthorizer,
 			bundlingOptions = {},
 			role,
 			defaults,
 			defaultScopes,
 			domain,
 			eventBuses,
+			api,
+			stage,
 		}: LambdaServiceProps,
 	) {
 		super(scope, id);
@@ -101,76 +149,46 @@ export class LambdaService extends Construct implements iam.IGrantable {
 		this.grantPrincipal = role.grantPrincipal;
 
 		/**
-		 * The HTTP api
+		 * The HTTP api.
+		 *
+		 * We create a new API gateway and stage if one was not provided. If one is
+		 * provided, for example if this is being used as a module in a larger
+		 * stack, then we'll use the provided gateway and stage.
 		 */
-		this.api = new apigwv2.CfnApi(this, 'Api', {
-			protocolType: 'HTTP',
-			corsConfiguration: {
-				allowHeaders: [
-					'Authorization',
-					'Content-Type',
-					'Accept',
-					'Accept-Language',
-					'Content-Language',
-					'Cf-Access-Jwt-Assertion',
-				],
-				allowMethods: [
-					'GET',
-					'HEAD',
-					'OPTIONS',
-					'PATCH',
-					'POST',
-					'PUT',
-					'DELETE',
-				],
-				allowOrigins: ['*'],
-				maxAge: 3600,
-			},
-			name: cdk.Names.uniqueId(this),
-		});
+		this.api =
+			api ?? new ApiGateway(this, 'Api', { name: cdk.Names.uniqueId(this) });
+		this.stage = stage ?? new ApiStage(this, 'Stage', { api: this.api });
 
-		this.stage = new apigwv2.CfnStage(this, 'Stage', {
-			apiId: this.api.ref,
-			stageName: '$default',
-			autoDeploy: true,
-		});
+		if (authorizer === undefined) {
+			// Keep backward compatibility
+			authorizer = lambdaAuthorizer ?? jwtAuthorizer;
+		}
+		/**
+		 * If an existing authorizer is provided, we'll use that. If not, we'll
+		 * create a new one with the given config.
+		 */
+		if (authorizer instanceof CfnAuthorizer) {
+			this.authorizer = authorizer;
+		} else if (isLambdaAuthorizerConfig(authorizer)) {
+			this.authorizer = new LambdaAuthorizer(this, 'Authorizer', {
+				api: this.api,
+				config: authorizer,
+				name: `${cdk.Names.uniqueId(this)}LambdaAuthorizer`,
+			});
+		} else if (isJwtAuthorizerConfig(authorizer)) {
+			this.authorizer = new JwtAuthorizer(this, 'Authorizer', {
+				api: this.api,
+				config: authorizer,
+				name: `${cdk.Names.uniqueId(this)}JwtAuthorizer`,
+			});
+		}
 
 		/**
 		 * Get all handler information from handlers
 		 */
-		const handlers = extractHandlers(handlersFolder);
-
-		let authorizer: apigwv2.CfnAuthorizer | undefined = undefined;
-		if (lambdaAuthorizer) {
-			authorizer = new apigwv2.CfnAuthorizer(this, 'Authorizer', {
-				apiId: this.api.ref,
-				authorizerType: 'REQUEST',
-				authorizerUri: cdk.Fn.join('', [
-					'arn:',
-					cdk.Fn.ref('AWS::Partition'),
-					':apigateway:',
-					cdk.Fn.ref('AWS::Region'),
-					':lambda:path/2015-03-31/functions/',
-					lambdaAuthorizer.fn.functionArn,
-					'/invocations',
-				]),
-				name: `${cdk.Names.uniqueId(this)}LambdaAuthorizer`,
-				identitySource: [...lambdaAuthorizer.identitySource],
-				authorizerPayloadFormatVersion: '2.0',
-				enableSimpleResponses: lambdaAuthorizer.enableSimpleResponses,
-			});
-		} else if (jwtAuthorizer) {
-			authorizer = new apigwv2.CfnAuthorizer(this, 'JwtAuthorizer', {
-				apiId: this.api.ref,
-				authorizerType: 'JWT',
-				name: `${cdk.Names.uniqueId(this)}JwtAuthorizer`,
-				identitySource: [...jwtAuthorizer.identitySource],
-				jwtConfiguration: {
-					audience: [...jwtAuthorizer.audience],
-					issuer: jwtAuthorizer.issuer,
-				},
-			});
-		}
+		const handlers: ReturnType<typeof extractHandlers> = handlersFolder
+			? extractHandlers(handlersFolder)
+			: { api: {}, notification: {}, queue: {}, cron: {}, event: {} };
 
 		if (domain) {
 			const { certificate, domainName, route53Zone } = domain;
@@ -219,9 +237,9 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				definition: apiHandler,
 				httpApi: this.api,
 				role,
-				authorizer: authorizer,
+				authorizer: this.authorizer,
 				bundlingOptions,
-				defaultScopes: defaultScopes,
+				defaultScopes,
 				defaults,
 			});
 			this.functions.push(apiFn.fn);
@@ -232,11 +250,12 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			 * Create the queue handlers and their respective queues
 			 */
 			const queueFn = new ServiceQueueFunction(this, queueHandler.name, {
-				role: role,
+				role,
 				definition: queueHandler,
 				bundlingOptions,
 			});
 			this.functions.push(queueFn.fn);
+			this.queues.set(queueFn.definition.queueName, queueFn);
 
 			this.environmentVariables.set(
 				queueFn.queueEnvironmentVariable,
@@ -275,7 +294,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			}
 
 			const eventFn = new ServiceEventFunction(this, eventHandler.name, {
-				role: role,
+				role,
 				definition: eventHandler,
 				bundlingOptions,
 				eventBus,
@@ -303,8 +322,8 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				notificationHandler.name,
 				{
 					definition: notificationHandler,
-					role: role,
-					topic: topic,
+					role,
+					topic,
 					bundlingOptions,
 				},
 			);
@@ -318,7 +337,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			 */
 			const cronFn = new ServiceCronFunction(this, cronHandler.name, {
 				definition: cronHandler,
-				role: role,
+				role,
 				bundlingOptions,
 			});
 
@@ -346,6 +365,22 @@ export class LambdaService extends Construct implements iam.IGrantable {
 		for (const fn of this.functions) {
 			fn.addEnvironment(key, value);
 		}
+	}
+
+	/** Allows this service to send messages to the queue handled by this
+	 * function.
+	 *
+	 * This is only necessary if you are sending messages across services.
+	 * The service always has access to its own queues.
+	 */
+	public grantSendToQueue(queueFn: ServiceQueueFunction) {
+		this.addEnvironment(
+			queueFn.queueEnvironmentVariable,
+			queueFn.queue.queueName,
+		);
+		this.addEnvironment(queueFn.dlqEnvironmentVariable, queueFn.dlq.queueName);
+		queueFn.queue.grantSendMessages(this);
+		queueFn.dlq.grantSendMessages(this);
 	}
 
 	/**
