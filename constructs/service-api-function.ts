@@ -70,7 +70,7 @@ export class ServiceApiFunction extends BaseFunction<ApiHandlerDefinition> {
 
 		this.integration.overrideLogicalId(
 			definition.cfnOverrides?.logicalIds?.integration ??
-				`ServiceApiIntegration${definition.method}${routeToAlphaNumeric(
+				`ApiIntegration${definition.method}${routeToAlphaNumeric(
 					definition.route,
 				)}`,
 		);
@@ -93,9 +93,7 @@ export class ServiceApiFunction extends BaseFunction<ApiHandlerDefinition> {
 		});
 		this.route.overrideLogicalId(
 			definition.cfnOverrides?.logicalIds?.route ??
-				`ServiceApiRoute${definition.method}${routeToAlphaNumeric(
-					definition.route,
-				)}`,
+				`ApiRoute${definition.method}${routeToAlphaNumeric(definition.route)}`,
 		);
 	}
 }
