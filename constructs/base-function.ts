@@ -6,7 +6,7 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import type { FullHandlerDefinition } from '../extract/extract-handlers';
 import { LambdaServiceProps } from './lambda-service';
-import { IVpc, SubnetSelection } from 'aws-cdk-lib/aws-ec2';
+import { ISecurityGroup, IVpc, SubnetSelection } from 'aws-cdk-lib/aws-ec2';
 import { HandlerDefinition } from '../handlers/handler';
 
 export interface BaseFunctionProps<T extends HandlerDefinition> {
@@ -17,6 +17,7 @@ export interface BaseFunctionProps<T extends HandlerDefinition> {
 	defaults?: LambdaServiceProps['defaults'];
 	vpc?: IVpc;
 	vpcSubnets?: SubnetSelection;
+	securityGroups?: ISecurityGroup[];
 	environment?: { [key: string]: string };
 }
 
@@ -37,6 +38,7 @@ export class BaseFunction<
 			defaults,
 			vpc,
 			vpcSubnets,
+			securityGroups,
 			environment,
 		}: BaseFunctionProps<T>,
 	) {
@@ -79,6 +81,7 @@ export class BaseFunction<
 			layers,
 			vpc: useVpc ? vpc : undefined,
 			vpcSubnets: useVpc ? vpcSubnets : undefined,
+			securityGroups,
 		});
 
 		this.definition = definition;

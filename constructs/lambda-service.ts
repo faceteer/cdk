@@ -28,7 +28,7 @@ import {
 	LambdaAuthorizerConfig,
 } from './api-gateway';
 import { CfnAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2';
-import { IVpc, SubnetSelection } from 'aws-cdk-lib/aws-ec2';
+import { ISecurityGroup, IVpc, SubnetSelection } from 'aws-cdk-lib/aws-ec2';
 import { BaseFunctionProps } from './base-function';
 
 export interface LambdaServiceProps {
@@ -84,10 +84,12 @@ export interface LambdaServiceProps {
 		timeout?: number;
 		vpc?: boolean;
 	};
-	/** The VPC that the Lambda should run in. */
+	/** The VPC that the Lambda handlers should run in. */
 	vpc?: IVpc;
-	/** The VPC subnets that the Lambda should run in. */
+	/** The VPC subnets that the Lambda handlers should run in. */
 	vpcSubnets?: SubnetSelection;
+	/** The security groups that apply to the Lambda handlers. */
+	securityGroups?: ISecurityGroup[];
 	/** @deprecated Use `defaults.scopes` */
 	defaultScopes?: string[];
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
@@ -136,6 +138,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			layers,
 			vpc,
 			vpcSubnets,
+			securityGroups,
 		}: LambdaServiceProps,
 	) {
 		super(scope, id);
@@ -255,6 +258,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			defaults,
 			vpc,
 			vpcSubnets,
+			securityGroups,
 		};
 
 		/**
