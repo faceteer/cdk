@@ -68,8 +68,8 @@ function makeHandlerDefinition<T extends AnyHandler>({
 	};
 }
 
-export function extractHandlers(path: string) {
-	const files = getAllFiles(path);
+export function extractHandlers(basePath: string) {
+	const files = getAllFiles(basePath);
 	// Sort the files to get consistent duplicate name handling
 	files.sort();
 
@@ -98,7 +98,7 @@ export function extractHandlers(path: string) {
 			// In case of a collision, we'll add a portion of the file hash to the handler name.
 			const pathHash = crypto
 				.createHash('sha256')
-				.update(file)
+				.update(path.relative(basePath, file))
 				.digest('hex')
 				.slice(0, 6);
 			if (handlers[handler.type][name] !== undefined) {
