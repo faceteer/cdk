@@ -86,9 +86,15 @@ export class BaseFunction<
 
 		this.definition = definition;
 		this.timeout = timeout;
+
+		const logRetention =
+			definition.logRetention ?? defaults?.logRetention ?? 'destroy';
 		new logs.LogGroup(this, 'LogGroup', {
 			logGroupName: `/aws/lambda/${this.functionName}`,
-			removalPolicy: cdk.RemovalPolicy.DESTROY,
+			removalPolicy:
+				logRetention === 'destroy'
+					? cdk.RemovalPolicy.DESTROY
+					: cdk.RemovalPolicy.RETAIN,
 		});
 	}
 }

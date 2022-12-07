@@ -83,6 +83,7 @@ export interface LambdaServiceProps {
 		memorySize?: number;
 		timeout?: number;
 		vpc?: boolean;
+		logRetention?: 'destroy' | 'retain';
 	};
 	/** The VPC that the Lambda handlers should run in. */
 	vpc?: IVpc;
