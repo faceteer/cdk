@@ -13,9 +13,13 @@ export class ServiceEventFunction extends BaseFunction<EventHandlerDefinition> {
 	readonly rule: events.Rule;
 
 	constructor(scope: Construct, id: string, props: ServiceEventFunctionProps) {
-		const { definition, eventBus } = props;
+		const { definition, defaults, eventBus } = props;
 		super(scope, id, {
 			...props,
+			defaults: {
+				timeout: 60,
+				...defaults,
+			},
 			environment: {
 				DD_TAGS: `handler_type:queue,handler_name:${definition.name}`,
 				...props.environment,

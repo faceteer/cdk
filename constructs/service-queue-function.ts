@@ -17,9 +17,13 @@ export class ServiceQueueFunction extends BaseFunction<QueueHandlerDefinition> {
 	readonly eventSource: lambdaEventSources.SqsEventSource;
 
 	constructor(scope: Construct, id: string, props: ServiceQueueFunctionProps) {
-		const { role, definition } = props;
+		const { role, defaults, definition } = props;
 		super(scope, id, {
 			...props,
+			defaults: {
+				timeout: 60,
+				...defaults,
+			},
 			environment: {
 				DD_TAGS: `handler_type:queue,handler_name:${definition.name}`,
 				...props.environment,

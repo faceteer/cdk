@@ -27,6 +27,10 @@ export class ServiceApiFunction extends BaseFunction<ApiHandlerDefinition> {
 		} = props;
 		super(scope, id, {
 			...props,
+			defaults: {
+				timeout: 30,
+				...defaults,
+			},
 			environment: {
 				DD_TAGS: `handler_type:api,handler_name:${definition.name}`,
 				...props.environment,

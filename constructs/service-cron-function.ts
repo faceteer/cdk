@@ -10,9 +10,13 @@ export class ServiceCronFunction extends BaseFunction<CronHandlerDefinition> {
 	readonly rule: events.Rule;
 
 	constructor(scope: Construct, id: string, props: ServiceCronFunctionProps) {
-		const { definition } = props;
+		const { definition, defaults } = props;
 		super(scope, id, {
 			...props,
+			defaults: {
+				timeout: 60,
+				...defaults,
+			},
 			environment: {
 				DD_TAGS: `handler_type:cron,handler_name:${definition.name}`,
 				...props.environment,

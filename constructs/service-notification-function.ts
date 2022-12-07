@@ -20,9 +20,13 @@ export class ServiceNotificationFunction extends BaseFunction<NotificationHandle
 		id: string,
 		props: ServiceNotificationFunctionProps,
 	) {
-		const { definition, topic } = props;
+		const { definition, defaults, topic } = props;
 		super(scope, id, {
 			...props,
+			defaults: {
+				timeout: 60,
+				...defaults,
+			},
 			environment: {
 				DD_TAGS: `handler_type:notification,handler_name:${definition.name}`,
 				...props.environment,
