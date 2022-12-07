@@ -4,10 +4,10 @@ import { Construct } from 'constructs';
 import { EventHandlerDefinition } from '../handlers';
 import { BaseFunction, BaseFunctionProps } from './base-function';
 
-export type ServiceEventFunctionProps =
-	BaseFunctionProps<EventHandlerDefinition> & {
-		eventBus: events.IEventBus;
-	};
+export interface ServiceEventFunctionProps
+	extends BaseFunctionProps<EventHandlerDefinition> {
+	eventBus: events.IEventBus;
+}
 
 export class ServiceEventFunction extends BaseFunction<EventHandlerDefinition> {
 	readonly rule: events.Rule;
