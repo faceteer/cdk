@@ -6,12 +6,12 @@ import type { ApiHandlerDefinition } from '../handlers/api-handler';
 import { LambdaServiceProps } from './lambda-service';
 import { BaseFunction, BaseFunctionProps } from './base-function';
 
-export interface ServiceApiFunctionProps
-	extends BaseFunctionProps<ApiHandlerDefinition> {
-	httpApi: apigwv2.CfnApi;
-	authorizer?: apigwv2.CfnAuthorizer;
-	defaultScopes?: LambdaServiceProps['defaultScopes'];
-}
+export type ServiceApiFunctionProps =
+	BaseFunctionProps<ApiHandlerDefinition> & {
+		httpApi: apigwv2.CfnApi;
+		authorizer?: apigwv2.CfnAuthorizer;
+		defaultScopes?: LambdaServiceProps['defaultScopes'];
+	};
 
 export class ServiceApiFunction extends BaseFunction<ApiHandlerDefinition> {
 	readonly route: apigwv2.CfnRoute;

@@ -6,20 +6,17 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import type { FullHandlerDefinition } from '../extract/extract-handlers';
 import { LambdaServiceProps } from './lambda-service';
-import { ISecurityGroup, IVpc, SubnetSelection } from 'aws-cdk-lib/aws-ec2';
 import { HandlerDefinition } from '../handlers/handler';
+import { VpcSettings } from './vpc';
 
-export interface BaseFunctionProps<T extends HandlerDefinition> {
+export type BaseFunctionProps<T extends HandlerDefinition> = {
 	role: iam.IRole;
 	definition: FullHandlerDefinition<T>;
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
 	layers?: lambda.ILayerVersion[];
 	defaults?: LambdaServiceProps['defaults'];
-	vpc?: IVpc;
-	vpcSubnets?: SubnetSelection;
-	securityGroups?: ISecurityGroup[];
 	environment?: { [key: string]: string };
-}
+} & VpcSettings;
 
 export class BaseFunction<
 	T extends HandlerDefinition,

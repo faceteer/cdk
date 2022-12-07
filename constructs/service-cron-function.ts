@@ -4,8 +4,7 @@ import { Construct } from 'constructs';
 import { CronHandlerDefinition } from '../handlers';
 import { BaseFunction, BaseFunctionProps } from './base-function';
 
-export interface ServiceCronFunctionProps
-	extends BaseFunctionProps<CronHandlerDefinition> {}
+export type ServiceCronFunctionProps = BaseFunctionProps<CronHandlerDefinition>;
 
 export class ServiceCronFunction extends BaseFunction<CronHandlerDefinition> {
 	readonly rule: events.Rule;

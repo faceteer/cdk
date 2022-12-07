@@ -6,8 +6,8 @@ import { Construct } from 'constructs';
 import { QueueHandlerDefinition } from '../handlers/queue-handler';
 import { BaseFunction, BaseFunctionProps } from './base-function';
 
-export interface ServiceQueueFunctionProps
-	extends BaseFunctionProps<QueueHandlerDefinition> {}
+export type ServiceQueueFunctionProps =
+	BaseFunctionProps<QueueHandlerDefinition>;
 
 export class ServiceQueueFunction extends BaseFunction<QueueHandlerDefinition> {
 	readonly queue: sqs.Queue;

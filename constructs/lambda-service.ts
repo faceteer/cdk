@@ -28,10 +28,10 @@ import {
 	LambdaAuthorizerConfig,
 } from './api-gateway';
 import { CfnAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2';
-import { ISecurityGroup, IVpc, SubnetSelection } from 'aws-cdk-lib/aws-ec2';
 import { BaseFunctionProps } from './base-function';
+import { VpcSettings } from './vpc';
 
-export interface LambdaServiceProps {
+export type LambdaServiceProps = {
 	/** The path to the folder where the handlers are stored.
 	 *
 	 * If omitted, then the service will have no handlers. This can be useful if
@@ -85,12 +85,6 @@ export interface LambdaServiceProps {
 		vpc?: boolean;
 		logRetention?: 'destroy' | 'retain';
 	};
-	/** The VPC that the Lambda handlers should run in. */
-	vpc?: IVpc;
-	/** The VPC subnets that the Lambda handlers should run in. */
-	vpcSubnets?: SubnetSelection;
-	/** The security groups that apply to the Lambda handlers. */
-	securityGroups?: ISecurityGroup[];
 	/** @deprecated Use `defaults.scopes` */
 	defaultScopes?: string[];
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
@@ -105,7 +99,7 @@ export interface LambdaServiceProps {
 	 * Use the key to reference the appropriate event bus in your Event Handler definition.
 	 */
 	eventBuses?: { [key: string]: events.IEventBus };
-}
+} & VpcSettings;
 
 export class LambdaService extends Construct implements iam.IGrantable {
 	readonly api: apigwv2.CfnApi;
@@ -147,10 +141,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 		this.environmentVariables.set('NODE_OPTIONS', '--enable-source-maps');
 		this.environmentVariables.set('ACCOUNT_ID', cdk.Fn.ref('AWS::AccountId'));
 
-		if (
-			(vpc !== undefined || vpcSubnets !== undefined) &&
-			defaults?.vpc === undefined
-		) {
+		if (vpc !== undefined && defaults?.vpc === undefined) {
 			// If a VPC is supplied, then enable VPC use for functions by default. It
 			// could be an easy mistake to add a VPC but not enable its usage.
 			defaults = {

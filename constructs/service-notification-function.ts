@@ -6,10 +6,10 @@ import { Construct } from 'constructs';
 import { NotificationHandlerDefinition } from '../handlers';
 import { BaseFunction, BaseFunctionProps } from './base-function';
 
-export interface ServiceNotificationFunctionProps
-	extends BaseFunctionProps<NotificationHandlerDefinition> {
-	topic: sns.Topic;
-}
+export type ServiceNotificationFunctionProps =
+	BaseFunctionProps<NotificationHandlerDefinition> & {
+		topic: sns.Topic;
+	};
 
 export class ServiceNotificationFunction extends BaseFunction<NotificationHandlerDefinition> {
 	readonly dlq: sqs.Queue;
