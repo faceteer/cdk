@@ -15,9 +15,11 @@ export interface BaseFunctionProps<T extends HandlerDefinition> {
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
 	layers?: lambda.ILayerVersion[];
 	defaults?: LambdaServiceProps['defaults'];
-	vpc?: IVpc;
-	vpcSubnets?: SubnetSelection;
-	securityGroups?: ISecurityGroup[];
+	network?: {
+		vpc: IVpc;
+		vpcSubnets?: SubnetSelection;
+		securityGroups?: ISecurityGroup[];
+	};
 	environment?: { [key: string]: string };
 }
 
@@ -36,21 +38,14 @@ export class BaseFunction<
 			bundlingOptions = {},
 			layers,
 			defaults,
-			vpc,
-			vpcSubnets,
-			securityGroups,
+			network,
 			environment,
 		}: BaseFunctionProps<T>,
 	) {
 		const useVpc = definition.vpc ?? defaults?.vpc ?? false;
-		if (useVpc && vpc === undefined) {
+		if (useVpc && network === undefined) {
 			throw new Error(
 				'Function is defined to use VPC, but no VPC has been provided for service.',
-			);
-		}
-		if (useVpc && vpcSubnets === undefined) {
-			throw new Error(
-				'Function is defined to use VPC, but no VPC subnet selection has been provided for service.',
 			);
 		}
 		const timeout = cdk.Duration.seconds(
@@ -79,9 +74,9 @@ export class BaseFunction<
 				...environment,
 			},
 			layers,
-			vpc: useVpc ? vpc : undefined,
-			vpcSubnets: useVpc ? vpcSubnets : undefined,
-			securityGroups,
+			vpc: useVpc ? network?.vpc : undefined,
+			vpcSubnets: useVpc ? network?.vpcSubnets : undefined,
+			securityGroups: useVpc ? network?.securityGroups : undefined,
 		});
 
 		this.definition = definition;

@@ -85,12 +85,26 @@ export interface LambdaServiceProps {
 		vpc?: boolean;
 		logRetention?: 'destroy' | 'retain';
 	};
-	/** The VPC that the Lambda handlers should run in. */
-	vpc?: IVpc;
-	/** The VPC subnets that the Lambda handlers should run in. */
-	vpcSubnets?: SubnetSelection;
-	/** The security groups that apply to the Lambda handlers. */
-	securityGroups?: ISecurityGroup[];
+	/** VPC, subnet, and security groups for the lambda functions.
+	 *
+	 * If provided, all functions will be created in the VPC by default. You can
+	 * override that by setting `vpc: false`, either globally in {@link defaults}
+	 * or per-function in the function handler definition.
+	 */
+	network?: {
+		/** The VPC that the Lambda handlers should run in. */
+		vpc: IVpc;
+		/** The VPC subnets that the Lambda handlers should run in.
+		 *
+		 * If undefined, the Vpc default strategy is used.
+		 */
+		vpcSubnets?: SubnetSelection;
+		/** The security groups that apply to the Lambda handlers.
+		 *
+		 * If undefined,
+		 */
+		securityGroups?: ISecurityGroup[];
+	};
 	/** @deprecated Use `defaults.scopes` */
 	defaultScopes?: string[];
 	bundlingOptions?: lambdaNodeJs.BundlingOptions;
@@ -137,9 +151,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			api,
 			stage,
 			layers,
-			vpc,
-			vpcSubnets,
-			securityGroups,
+			network,
 		}: LambdaServiceProps,
 	) {
 		super(scope, id);
@@ -147,10 +159,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 		this.environmentVariables.set('NODE_OPTIONS', '--enable-source-maps');
 		this.environmentVariables.set('ACCOUNT_ID', cdk.Fn.ref('AWS::AccountId'));
 
-		if (
-			(vpc !== undefined || vpcSubnets !== undefined) &&
-			defaults?.vpc === undefined
-		) {
+		if (network && defaults?.vpc === undefined) {
 			// If a VPC is supplied, then enable VPC use for functions by default. It
 			// could be an easy mistake to add a VPC but not enable its usage.
 			defaults = {
@@ -257,9 +266,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			bundlingOptions,
 			layers,
 			defaults,
-			vpc,
-			vpcSubnets,
-			securityGroups,
+			network,
 		};
 
 		/**
