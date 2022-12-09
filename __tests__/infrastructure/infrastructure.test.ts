@@ -3,6 +3,7 @@ import { LambdaService } from '../../constructs';
 import { Construct } from 'constructs';
 import { App, Stack } from 'aws-cdk-lib';
 import { EventBus } from 'aws-cdk-lib/aws-events';
+import { Template } from 'aws-cdk-lib/assertions';
 
 class ExampleStack extends Stack {
 	readonly service: LambdaService;
@@ -24,9 +25,13 @@ class ExampleStack extends Stack {
 const app = new App();
 
 describe('Create Service', () => {
-	test('All expected handlers exist', () => {
+	test('Logical Ids remain unchanged', () => {
 		const stack = new ExampleStack(app, 'ExampleStack');
 
-		expect(stack.service.functions).toHaveLength(7);
+		const LogicalIds = Object.keys(
+			Template.fromStack(stack).findResources('AWS::Lambda::Function'),
+		);
+
+		expect(LogicalIds).toMatchSnapshot();
 	});
 });

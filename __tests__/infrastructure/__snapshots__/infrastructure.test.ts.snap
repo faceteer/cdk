@@ -1,0 +1,13 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Create Service Logical Ids remain unchanged 1`] = `
+Array [
+  "ExampleServiceApiGetUser83E03BE5",
+  "ExampleServiceApiGetUsere3a216CD49716B",
+  "ExampleServiceApiCreateUser6E31DB0D",
+  "ExampleServiceQueueUpdateUser725EDE63",
+  "ExampleServiceEventUserAddedEventB025E55F",
+  "ExampleServiceIncomingEmailSendToProcessQueue17229132",
+  "ExampleServiceQueuePullsED3940BC",
+]
+`;
