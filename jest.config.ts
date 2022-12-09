@@ -4,7 +4,7 @@ export default {
 	reporters: ['default', 'jest-junit'],
 	testPathIgnorePatterns: [
 		'^.+\\.js$',
-     '/__mocks__/',
+     	'/__mocks__/',
 		'/fixtures/',
 		'^.+\\.d\\.ts$',
 		'^.+/infrastructure/(bin|lib)/',
