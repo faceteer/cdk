@@ -90,6 +90,10 @@ export class BaseFunction<
 				logRetention === 'destroy'
 					? cdk.RemovalPolicy.DESTROY
 					: cdk.RemovalPolicy.RETAIN,
+			retention:
+				definition.logRetentionDuration ??
+				defaults?.logRetentionDuration ??
+				cdk.aws_logs.RetentionDays.TWO_MONTHS,
 		});
 	}
 }
