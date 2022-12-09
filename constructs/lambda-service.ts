@@ -28,6 +28,8 @@ import {
 	LambdaAuthorizerConfig,
 } from './api-gateway';
 import { CfnAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2';
+import { ISecurityGroup, IVpc, SubnetSelection } from 'aws-cdk-lib/aws-ec2';
+import { BaseFunctionProps } from './base-function';
 
 export interface LambdaServiceProps {
 	/** The path to the folder where the handlers are stored.
@@ -71,10 +73,37 @@ export interface LambdaServiceProps {
 		identitySource: string[];
 		enableSimpleResponses?: boolean;
 	};
+	/** The default options that will apply to all handlers.
+	 *
+	 * These options apply to all handlers.
+	 * They can be overridden in the handler configuration itself.
+	 */
 	defaults?: {
-		scopes: string[];
-		memorySize: number;
-		timeout: number;
+		scopes?: string[];
+		memorySize?: number;
+		timeout?: number;
+		vpc?: boolean;
+		logRetention?: 'destroy' | 'retain';
+	};
+	/** VPC, subnet, and security groups for the lambda functions.
+	 *
+	 * If provided, all functions will be created in the VPC by default. You can
+	 * override that by setting `vpc: false`, either globally in {@link defaults}
+	 * or per-function in the function handler definition.
+	 */
+	network?: {
+		/** The VPC that the Lambda handlers should run in. */
+		vpc: IVpc;
+		/** The VPC subnets that the Lambda handlers should run in.
+		 *
+		 * If undefined, the Vpc default strategy is used.
+		 */
+		vpcSubnets?: SubnetSelection;
+		/** The security groups that apply to the Lambda handlers.
+		 *
+		 * If undefined,
+		 */
+		securityGroups?: ISecurityGroup[];
 	};
 	/** @deprecated Use `defaults.scopes` */
 	defaultScopes?: string[];
@@ -121,12 +150,23 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			eventBuses,
 			api,
 			stage,
+			layers,
+			network,
 		}: LambdaServiceProps,
 	) {
 		super(scope, id);
 
 		this.environmentVariables.set('NODE_OPTIONS', '--enable-source-maps');
 		this.environmentVariables.set('ACCOUNT_ID', cdk.Fn.ref('AWS::AccountId'));
+
+		if (network && defaults?.vpc === undefined) {
+			// If a VPC is supplied, then enable VPC use for functions by default. It
+			// could be an easy mistake to add a VPC but not enable its usage.
+			defaults = {
+				...defaults,
+				vpc: true,
+			};
+		}
 
 		if (!role) {
 			/**
@@ -220,6 +260,15 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			}
 		}
 
+		/** Function props shared by all functions. Just add definition and any handler-specific props! */
+		const baseFunctionProps: Omit<BaseFunctionProps<never>, 'definition'> = {
+			role,
+			bundlingOptions,
+			layers,
+			defaults,
+			network,
+		};
+
 		/**
 		 * Create all of the API handlers
 		 */
@@ -234,15 +283,13 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			 * Add a new function to the API
 			 */
 			const apiFn = new ServiceApiFunction(this, apiHandler.name, {
+				...baseFunctionProps,
+				defaultScopes,
 				definition: apiHandler,
 				httpApi: this.api,
-				role,
 				authorizer: this.authorizer,
-				bundlingOptions,
-				defaultScopes,
-				defaults,
 			});
-			this.functions.push(apiFn.fn);
+			this.functions.push(apiFn);
 		}
 
 		for (const queueHandler of Object.values(handlers.queue)) {
@@ -250,11 +297,10 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			 * Create the queue handlers and their respective queues
 			 */
 			const queueFn = new ServiceQueueFunction(this, queueHandler.name, {
-				role,
+				...baseFunctionProps,
 				definition: queueHandler,
-				bundlingOptions,
 			});
-			this.functions.push(queueFn.fn);
+			this.functions.push(queueFn);
 			this.queues.set(queueFn.definition.queueName, queueFn);
 
 			this.environmentVariables.set(
@@ -294,12 +340,11 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			}
 
 			const eventFn = new ServiceEventFunction(this, eventHandler.name, {
-				role,
+				...baseFunctionProps,
 				definition: eventHandler,
-				bundlingOptions,
 				eventBus,
 			});
-			this.functions.push(eventFn.fn);
+			this.functions.push(eventFn);
 		}
 
 		for (const notificationHandler of Object.values(handlers.notification)) {
@@ -321,14 +366,13 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				this,
 				notificationHandler.name,
 				{
+					...baseFunctionProps,
 					definition: notificationHandler,
-					role,
 					topic,
-					bundlingOptions,
 				},
 			);
 
-			this.functions.push(notificationFn.fn);
+			this.functions.push(notificationFn);
 		}
 
 		for (const cronHandler of Object.values(handlers.cron)) {
@@ -336,12 +380,11 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			 * Create cron handlers
 			 */
 			const cronFn = new ServiceCronFunction(this, cronHandler.name, {
+				...baseFunctionProps,
 				definition: cronHandler,
-				role,
-				bundlingOptions,
 			});
 
-			this.functions.push(cronFn.fn);
+			this.functions.push(cronFn);
 		}
 
 		/**

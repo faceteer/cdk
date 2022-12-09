@@ -9,10 +9,6 @@ describe('Parse Handlers', () => {
 
 		const basePath = path.join(__dirname, '../../fixtures/');
 
-		expect(console.error).toBeCalledWith(
-			`Failed to parse handler: ${basePath}api/test-bad.handler.ts`,
-		);
-
 		expect(handlers.api).toEqual({
 			ApiGetUser: {
 				method: 'GET',
@@ -22,6 +18,30 @@ describe('Parse Handlers', () => {
 				memorySize: 512,
 				name: 'ApiGetUser',
 				path: `${basePath}api/test-get.handler.ts`,
+				validators: undefined,
+				schemas: {
+					body: {
+						type: 'object',
+						properties: {
+							userId: {
+								type: 'string',
+							},
+							email: {
+								type: 'string',
+							},
+						},
+						required: ['email', 'userId'],
+					},
+				},
+			},
+			ApiGetUsere3a216: {
+				method: 'GET',
+				route: '/other-users/{userId}',
+				pathParameters: ['userId'],
+				description: 'Get some other user',
+				memorySize: 512,
+				name: 'ApiGetUsere3a216',
+				path: `${basePath}api/test-is-duplicate.handler.ts`,
 				validators: undefined,
 				schemas: {
 					body: {

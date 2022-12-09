@@ -19,6 +19,7 @@ import {
 	QueueHandlerDefinition,
 	QueueHandlerWithDefinition,
 } from '../handlers/queue-handler';
+import * as crypto from 'crypto';
 
 export interface HandlerNameAndPath {
 	name: string;
@@ -26,8 +27,52 @@ export interface HandlerNameAndPath {
 }
 export type FullHandlerDefinition<T> = T & HandlerNameAndPath;
 
-export function extractHandlers(path: string) {
-	const files = getAllFiles(path);
+type AnyHandler =
+	| ApiHandlerWithDefinition
+	| QueueHandlerWithDefinition<unknown>
+	| EventHandlerWithDefinition<EventBridgeEvent<string, unknown>>
+	| CronHandlerWithDefinition
+	| NotificationHandlerWithDefinition;
+
+function handlerName(handler: AnyHandler) {
+	switch (handler.type) {
+		case HandlerTypes.API:
+			return pascalCase(`Api ${handler.definition.name}`);
+		case HandlerTypes.Queue:
+			return pascalCase(`Queue ${handler.definition.queueName}`);
+		case HandlerTypes.Event:
+			return pascalCase(`Event ${handler.definition.name}`);
+		case HandlerTypes.Cron:
+			return pascalCase(handler.definition.name);
+		case HandlerTypes.Notification:
+			return pascalCase(
+				`${handler.definition.topicName}-${handler.definition.name}`,
+			);
+	}
+}
+
+function makeHandlerDefinition<T extends AnyHandler>({
+	handler,
+	file,
+	name,
+}: {
+	handler: T;
+	file: string;
+	name: string;
+}) {
+	const { definition } = handler;
+	return {
+		...definition,
+		name,
+		path: file,
+	};
+}
+
+export function extractHandlers(basePath: string) {
+	const files = getAllFiles(basePath);
+	// Sort the files to get consistent duplicate name handling
+	files.sort();
+
 	const handlers: {
 		api: Record<string, FullHandlerDefinition<ApiHandlerDefinition>>;
 		queue: Record<string, FullHandlerDefinition<QueueHandlerDefinition>>;
@@ -47,80 +92,31 @@ export function extractHandlers(path: string) {
 
 	for (const file of files) {
 		try {
-			const handler = require(file.replace(/\.ts$/g, '')).handler as
-				| ApiHandlerWithDefinition
-				| QueueHandlerWithDefinition<unknown>
-				| EventHandlerWithDefinition<EventBridgeEvent<string, unknown>>
-				| CronHandlerWithDefinition
-				| NotificationHandlerWithDefinition;
-			switch (handler.type) {
-				case HandlerTypes.API:
-					{
-						const { definition } = handler;
-						const fullDefinition: FullHandlerDefinition<ApiHandlerDefinition> =
-							{
-								...definition,
-								name: pascalCase(`Api ${definition.name}`),
-								path: file,
-							};
+			const handler = require(file.replace(/\.ts$/g, '')).handler as AnyHandler;
 
-						handlers.api[fullDefinition.name] = fullDefinition;
-					}
-
-					break;
-				case HandlerTypes.Queue:
-					{
-						const { definition } = handler;
-						const fullDefinition: FullHandlerDefinition<QueueHandlerDefinition> =
-							{
-								...definition,
-								name: pascalCase(`Queue ${definition.queueName}`),
-								path: file,
-							};
-						handlers.queue[fullDefinition.name] = fullDefinition;
-					}
-					break;
-				case HandlerTypes.Event:
-					{
-						const { definition } = handler;
-						const fullDefinition: FullHandlerDefinition<EventHandlerDefinition> =
-							{
-								...definition,
-								name: pascalCase(`Event ${definition.name}`),
-								path: file,
-							};
-						handlers.event[fullDefinition.name] = fullDefinition;
-					}
-					break;
-				case HandlerTypes.Cron:
-					{
-						const { definition } = handler;
-						const fullDefinition: FullHandlerDefinition<CronHandlerDefinition> =
-							{
-								...definition,
-								path: file,
-								name: pascalCase(definition.name),
-							};
-						handlers.cron[fullDefinition.name] = fullDefinition;
-					}
-					break;
-				case HandlerTypes.Notification:
-					{
-						const { definition } = handler;
-						const fullDefinition: FullHandlerDefinition<NotificationHandlerDefinition> =
-							{
-								...definition,
-								path: file,
-								name: pascalCase(`${definition.topicName}-${definition.name}`),
-							};
-
-						handlers.notification[fullDefinition.name] = fullDefinition;
-					}
-					break;
+			let name = handlerName(handler);
+			// In case of a collision, we'll add a portion of the file hash to the handler name.
+			const pathHash = crypto
+				.createHash('sha256')
+				.update(path.relative(basePath, file))
+				.digest('hex')
+				.slice(0, 6);
+			if (handlers[handler.type][name] !== undefined) {
+				name = `${name}${pathHash}`;
+				if (handlers[handler.type][name] !== undefined) {
+					// If they are still colliding with hash, we'll give up
+					throw new Error(
+						`There are multiple function with the name ${handler.name}, please rename one of them.`,
+					);
+				}
 			}
+
+			const fullDefinition = makeHandlerDefinition({ handler, file, name });
+			handlers[handler.type][fullDefinition.name] = fullDefinition;
 		} catch (error) {
 			console.error(`Failed to parse handler: ${file}`);
 			console.error(error);
+			throw error;
 		}
 	}
 

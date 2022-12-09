@@ -1,78 +1,46 @@
 import * as cdk from 'aws-cdk-lib';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
-import * as lambdaNodeJs from 'aws-cdk-lib/aws-lambda-nodejs';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
-import type { FullHandlerDefinition } from '../extract/extract-handlers';
 import { NotificationHandlerDefinition } from '../handlers';
+import { BaseFunction, BaseFunctionProps } from './base-function';
 
-export interface ServiceNotificationFunctionProps {
-	role: iam.IRole;
-	definition: FullHandlerDefinition<NotificationHandlerDefinition>;
-	bundlingOptions?: lambdaNodeJs.BundlingOptions;
+export interface ServiceNotificationFunctionProps
+	extends BaseFunctionProps<NotificationHandlerDefinition> {
 	topic: sns.Topic;
-	layers?: lambda.ILayerVersion[];
 }
 
-export class ServiceNotificationFunction extends Construct {
-	readonly fn: lambdaNodeJs.NodejsFunction;
+export class ServiceNotificationFunction extends BaseFunction<NotificationHandlerDefinition> {
 	readonly dlq: sqs.Queue;
-	readonly definition: FullHandlerDefinition<NotificationHandlerDefinition>;
+	readonly eventSource: lambdaEventSources.SnsEventSource;
 
 	constructor(
 		scope: Construct,
 		id: string,
-		{
-			role,
-			definition,
-			bundlingOptions,
-			topic,
-			layers,
-		}: ServiceNotificationFunctionProps,
+		props: ServiceNotificationFunctionProps,
 	) {
-		super(scope, id);
-
-		const timeout = definition.timeout
-			? cdk.Duration.seconds(definition.timeout)
-			: cdk.Duration.seconds(60);
-
-		this.definition = definition;
-
-		this.fn = new lambdaNodeJs.NodejsFunction(this, 'Function', {
-			role: role,
-			awsSdkConnectionReuse: true,
-			entry: definition.path,
-			description: definition.description,
-			allowAllOutbound: definition.allowAllOutbound,
-			allowPublicSubnet: definition.allowPublicSubnet,
-			memorySize: definition.memorySize ?? 256,
-			timeout,
-			bundling: {
-				...bundlingOptions,
-				sourceMap: true,
-				sourceMapMode: lambdaNodeJs.SourceMapMode.INLINE,
+		const { definition, defaults, topic } = props;
+		super(scope, id, {
+			...props,
+			defaults: {
+				timeout: 60,
+				...defaults,
 			},
 			environment: {
-				NODE_OPTIONS: '--enable-source-maps',
-				HANDLER_NAME: definition.name,
-				ACCOUNT_ID: cdk.Fn.ref('AWS::AccountId'),
 				DD_TAGS: `handler_type:notification,handler_name:${definition.name}`,
+				...props.environment,
 			},
-			layers,
 		});
 
 		this.dlq = new sqs.Queue(this, 'DLQ', {
 			receiveMessageWaitTime: cdk.Duration.seconds(20),
 		});
 
-		this.fn.addEventSource(
-			new lambdaEventSources.SnsEventSource(topic, {
-				filterPolicy: definition.filterPolicy,
-				deadLetterQueue: this.dlq,
-			}),
-		);
+		this.eventSource = new lambdaEventSources.SnsEventSource(topic, {
+			filterPolicy: definition.filterPolicy,
+			deadLetterQueue: this.dlq,
+		});
+		this.addEventSource(this.eventSource);
 	}
 }

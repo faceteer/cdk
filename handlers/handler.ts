@@ -39,6 +39,13 @@ export interface HandlerDefinition {
 	 * Attach the lambda function to the VPC
 	 */
 	vpc?: boolean;
+	/**
+	 * Should function logs be destroyed if the function itself is removed.
+	 *
+	 * This is 'destroy' by default, but you may wish to pick 'keep' so logs can
+	 * be audited even after the function is deleted.
+	 */
+	logRetention?: 'destroy' | 'retain';
 }
 
 /**
