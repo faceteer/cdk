@@ -1,5 +1,5 @@
 import { EventBridgeEvent } from 'aws-lambda';
-import { EventHandler } from '../../handlers';
+import { EventHandler } from '../../../handlers';
 
 interface User {
 	userId: string;

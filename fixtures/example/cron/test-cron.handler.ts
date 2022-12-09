@@ -1,4 +1,4 @@
-import { CronHandler } from '../../handlers';
+import { CronHandler } from '../../../handlers';
 
 export const handler = CronHandler(
 	{

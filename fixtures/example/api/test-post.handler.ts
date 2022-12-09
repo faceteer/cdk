@@ -1,5 +1,5 @@
-import { ApiHandler } from '../../handlers/api-handler';
-import { SuccessResponse } from '../../response/success-response';
+import { ApiHandler } from '../../../handlers/api-handler';
+import { SuccessResponse } from '../../../response/success-response';
 
 interface User {
 	userId: string;

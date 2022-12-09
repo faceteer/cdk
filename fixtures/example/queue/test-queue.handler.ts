@@ -1,4 +1,4 @@
-import { QueueHandler } from '../../handlers/queue-handler';
+import { QueueHandler } from '../../../handlers/queue-handler';
 import { SQSClient } from '@aws-sdk/client-sqs';
 
 interface User {

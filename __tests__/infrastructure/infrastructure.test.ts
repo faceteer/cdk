@@ -11,7 +11,7 @@ class ExampleStack extends Stack {
 	constructor(scope: Construct, id: string) {
 		super(scope, id);
 
-		const basePath = path.join(__dirname, '../../fixtures/');
+		const basePath = path.join(__dirname, '../../fixtures/example');
 
 		this.service = new LambdaService(this, 'ExampleService', {
 			handlersFolder: basePath,
