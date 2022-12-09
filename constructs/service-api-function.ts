@@ -1,10 +1,12 @@
 import * as cdk from 'aws-cdk-lib';
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import type { ApiHandlerDefinition } from '../handlers/api-handler';
 import { LambdaServiceProps } from './lambda-service';
 import { BaseFunction, BaseFunctionProps } from './base-function';
+import { routeToAlphaNumeric } from '../util/route-to-alphanumeric';
 
 export interface ServiceApiFunctionProps
 	extends BaseFunctionProps<ApiHandlerDefinition> {
@@ -66,6 +68,18 @@ export class ServiceApiFunction extends BaseFunction<ApiHandlerDefinition> {
 			payloadFormatVersion: '2.0',
 		});
 
+		this.integration.overrideLogicalId(
+			definition.cfnOverrides?.logicalIds?.integration ??
+				`ApiIntegration${definition.method}${routeToAlphaNumeric(
+					definition.route,
+				)}`,
+		);
+
+		if (definition.cfnOverrides?.logicalIds?.function) {
+			(this.node.defaultChild as lambda.CfnFunction).overrideLogicalId(
+				definition.cfnOverrides?.logicalIds?.function,
+			);
+		}
 		this.route = new apigwv2.CfnRoute(this, `Route`, {
 			apiId: httpApi.ref,
 			routeKey: `${definition.method} ${definition.route}`,
@@ -77,5 +91,9 @@ export class ServiceApiFunction extends BaseFunction<ApiHandlerDefinition> {
 					? undefined
 					: definition.scopes ?? defaults?.scopes ?? defaultScopes,
 		});
+		this.route.overrideLogicalId(
+			definition.cfnOverrides?.logicalIds?.route ??
+				`ApiRoute${definition.method}${routeToAlphaNumeric(definition.route)}`,
+		);
 	}
 }

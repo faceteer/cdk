@@ -73,6 +73,16 @@ export interface ApiHandlerDefinition<
 		query?: (query: unknown) => Q;
 		response?: (response: unknown) => R;
 	};
+	/**
+	 * Overrides for the generated cloudformation resources. If you don't know what this is, check out [this doc](https://docs.aws.amazon.com/cdk/v2/guide/identifiers.html)
+	 */
+	cfnOverrides?: {
+		logicalIds?: {
+			function?: string;
+			route?: string;
+			integration?: string;
+		};
+	};
 }
 
 export type ApiHandlerAuthorizer<
