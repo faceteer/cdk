@@ -77,6 +77,7 @@ export class BaseFunction<
 			vpc: useVpc ? network?.vpc : undefined,
 			vpcSubnets: useVpc ? network?.vpcSubnets : undefined,
 			securityGroups: useVpc ? network?.securityGroups : undefined,
+			architecture: definition.architecture ?? defaults?.architecture,
 		});
 
 		this.definition = definition;
