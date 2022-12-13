@@ -30,7 +30,6 @@ import {
 import { CfnAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2';
 import { ISecurityGroup, IVpc, SubnetSelection } from 'aws-cdk-lib/aws-ec2';
 import { BaseFunctionProps } from './base-function';
-import { Architecture } from 'aws-cdk-lib/aws-lambda';
 
 export interface LambdaServiceProps {
 	/** The path to the folder where the handlers are stored.
@@ -85,7 +84,7 @@ export interface LambdaServiceProps {
 		timeout?: number;
 		vpc?: boolean;
 		logRetention?: 'destroy' | 'retain';
-		architecture?: Architecture;
+		architecture?: 'x86_64' | 'arm64';
 	};
 	/** VPC, subnet, and security groups for the lambda functions.
 	 *

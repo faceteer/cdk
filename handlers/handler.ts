@@ -1,4 +1,3 @@
-import { Architecture } from 'aws-cdk-lib/aws-lambda';
 import type { Context } from 'aws-lambda';
 
 /**
@@ -49,12 +48,11 @@ export interface HandlerDefinition {
 	logRetention?: 'destroy' | 'retain';
 	/** The CPU architecture to use for this handler.
 	 *
-	 * Uses {@link Architecture.X86_64} by default. Changing to
-	 * {@link Architecture.ARM_64} will reduce costs, but node packages that rely
-	 * on native components may not work without additional effort as they will
-	 * have to be compiled for Arm.
+	 * Uses `x86_64` by default. Changing to `arm64` will reduce costs, but node
+	 * packages that rely on native components may not work without additional
+	 * effort as they will have to be compiled for Arm.
 	 */
-	architecture?: Architecture;
+	architecture?: 'x86_64' | 'arm64';
 }
 
 /**

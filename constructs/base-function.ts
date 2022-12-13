@@ -8,6 +8,7 @@ import type { FullHandlerDefinition } from '../extract/extract-handlers';
 import { LambdaServiceProps } from './lambda-service';
 import { ISecurityGroup, IVpc, SubnetSelection } from 'aws-cdk-lib/aws-ec2';
 import { HandlerDefinition } from '../handlers/handler';
+import { Architecture } from 'aws-cdk-lib/aws-lambda';
 
 export interface BaseFunctionProps<T extends HandlerDefinition> {
 	role: iam.IRole;
@@ -51,6 +52,8 @@ export class BaseFunction<
 		const timeout = cdk.Duration.seconds(
 			definition.timeout ?? defaults?.timeout ?? 30,
 		);
+		const architecture: 'x86_64' | 'arm64' =
+			definition.architecture ?? defaults?.architecture ?? 'x86_64';
 
 		super(scope, id, {
 			awsSdkConnectionReuse: true,
@@ -77,7 +80,8 @@ export class BaseFunction<
 			vpc: useVpc ? network?.vpc : undefined,
 			vpcSubnets: useVpc ? network?.vpcSubnets : undefined,
 			securityGroups: useVpc ? network?.securityGroups : undefined,
-			architecture: definition.architecture ?? defaults?.architecture,
+			architecture:
+				architecture === 'x86_64' ? Architecture.X86_64 : Architecture.ARM_64,
 		});
 
 		this.definition = definition;
