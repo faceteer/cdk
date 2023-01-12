@@ -18,11 +18,11 @@ describe('ApiLogicalIds', () => {
 		const app2 = new App();
 		const v1Path = path.join(
 			path.resolve(__dirname),
-			'../../__mocks__/renaming/v1',
+			'../../fixtures/renaming/v1',
 		);
 		const v2Path = path.join(
 			path.resolve(__dirname),
-			'../../__mocks__/renaming/v2',
+			'../../fixtures/renaming/v2',
 		);
 
 		const stackv1 = new ExampleApiStack(app, 'ApiStack', {
@@ -67,11 +67,11 @@ describe('ApiLogicalIds', () => {
 		const app2 = new App();
 		const v1Path = path.join(
 			path.resolve(__dirname),
-			'../../__mocks__/naming-conflict/v1',
+			'../../fixtures/naming-conflict/v1',
 		);
 		const v2Path = path.join(
 			path.resolve(__dirname),
-			'../../__mocks__/naming-conflict/v2',
+			'../../fixtures/naming-conflict/v2',
 		);
 
 		const stackv1 = new ExampleApiStack(app, 'ApiStack', {
@@ -103,7 +103,7 @@ describe('ApiLogicalIds', () => {
 		const app = new App();
 		const v1Path = path.join(
 			path.resolve(__dirname),
-			'../../__mocks__/override-logical-ids/',
+			'../../fixtures/override-logical-ids/',
 		);
 
 		const stack = new ExampleApiStack(app, 'ApiStack', {

@@ -1,4 +1,5 @@
 import type { Context } from 'aws-lambda';
+import { LogRetentionDays } from '../util/log-retention';
 
 /**
  * The base lambda handler definition for all
@@ -46,6 +47,10 @@ export interface HandlerDefinition {
 	 * be audited even after the function is deleted.
 	 */
 	logRetention?: 'destroy' | 'retain';
+	/**
+	 * How long should logs be kept while the stack is live?
+	 */
+	logRetentionDuration?: LogRetentionDays;
 }
 
 /**

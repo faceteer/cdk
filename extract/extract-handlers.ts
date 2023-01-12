@@ -93,7 +93,9 @@ export function extractHandlers(basePath: string) {
 	for (const file of files) {
 		try {
 			const handler = require(file.replace(/\.ts$/g, '')).handler as AnyHandler;
-
+			if (!handler) {
+				throw new Error(`${file} did not export a variable named 'handler'.`);
+			}
 			let name = handlerName(handler);
 			// In case of a collision, we'll add a portion of the file hash to the handler name.
 			const pathHash = crypto
@@ -136,7 +138,11 @@ function getAllFiles(dirPath: string, arrayOfFiles: string[] = []) {
 	files.forEach((file) => {
 		if (fs.statSync(`${dirPath}/${file}`).isDirectory()) {
 			filesArray = getAllFiles(`${dirPath}/${file}`, arrayOfFiles);
-		} else if (file.includes('.handler.') && !file.includes('.test.')) {
+		} else if (
+			file.includes('.handler') &&
+			!file.includes('.test.') &&
+			file.endsWith('.ts')
+		) {
 			filesArray.push(path.join(dirPath, '/', file));
 		}
 	});

@@ -1,5 +1,5 @@
-import { ApiHandler } from '../../handlers/api-handler';
-import { SuccessResponse } from '../../response/success-response';
+import { ApiHandler } from '../../../handlers/api-handler';
+import { SuccessResponse } from '../../../response/success-response';
 import type { JSONSchemaType } from 'ajv';
 
 interface User {
@@ -18,10 +18,11 @@ const UserSchema: JSONSchemaType<User> = {
 
 export const handler = ApiHandler(
 	{
+		// The name is duplicated with `test-get.handler.ts`
 		name: 'getUser',
 		method: 'GET',
-		route: '/users/{userId}',
-		description: 'Get a user',
+		route: '/other-users/{userId}',
+		description: 'Get some other user',
 		memorySize: 512,
 		schemas: {
 			body: UserSchema,

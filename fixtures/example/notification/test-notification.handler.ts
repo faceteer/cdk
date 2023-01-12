@@ -1,4 +1,4 @@
-import { NotificationHandler } from '../../handlers';
+import { NotificationHandler } from '../../../handlers';
 
 export const handler = NotificationHandler(
 	{
