@@ -51,6 +51,24 @@ export interface HandlerDefinition {
 	 * How long should logs be kept while the stack is live?
 	 */
 	logRetentionDuration?: LogRetentionDays;
+	/**
+	 * The AWS Lambda runtime to use for functions.
+	 *
+	 * The supported runtimes are listed in the type for convenience. In case
+	 * there are new Nodejs runtimes available, you should be able to pick those
+	 * here as well. Check the AWS Lambda documentation for the supported nodejs
+	 * runtimes: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html
+	 *
+	 * Defaults to nodejs14.x if not specified.
+	 */
+	runtime?: 'nodejs14.x' | 'nodejs16.x' | 'nodejs18.x';
+	/**
+	 * The AWS Lambda architecture to use for functions.
+	 *
+	 * Not all code will run out of the box on arm architectures. Code using
+	 * native modules may need to be specifically built for arm.
+	 */
+	architecture?: 'x86_64' | 'arm64';
 }
 
 /**
