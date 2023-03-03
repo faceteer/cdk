@@ -28,6 +28,8 @@ export const handler = ApiHandler(
 			body: UserSchema,
 		},
 		pathParameters: ['userId'],
+		architecture: 'arm64',
+		runtime: 'nodejs18.x',
 	},
 	async (event) => {
 		console.log(event);

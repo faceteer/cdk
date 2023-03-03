@@ -31,6 +31,7 @@ import { CfnAuthorizer } from 'aws-cdk-lib/aws-apigatewayv2';
 import { ISecurityGroup, IVpc, SubnetSelection } from 'aws-cdk-lib/aws-ec2';
 import { BaseFunctionProps } from './base-function';
 import { LogRetentionDays } from '../util/log-retention';
+import { HandlerDefinition } from '../handlers';
 
 export interface LambdaServiceProps {
 	/** The path to the folder where the handlers are stored.
@@ -86,6 +87,8 @@ export interface LambdaServiceProps {
 		vpc?: boolean;
 		logRetention?: 'destroy' | 'retain';
 		logRetentionDuration?: LogRetentionDays;
+		runtime?: HandlerDefinition['runtime'];
+		architecture?: HandlerDefinition['architecture'];
 	};
 	/** VPC, subnet, and security groups for the lambda functions.
 	 *
