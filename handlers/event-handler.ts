@@ -21,9 +21,16 @@ export interface EventHandlerDefinition extends HandlerDefinition {
 
 export type EventHandlerEvent<T extends EventBridgeEvent<string, any>> = T;
 
-export interface EventHandlerOptions<T extends EventBridgeEvent<string, any>>
+export interface EventHandlerOptions<T extends string, D extends any>
 	extends EventHandlerDefinition {
-	validator: (detail: EventBridgeEvent<string, any>) => T | void;
+	/** @deprecated use `validators` instead */
+	validator?: (
+		detail: EventBridgeEvent<string, any>,
+	) => EventBridgeEvent<T, D> | void;
+	validators?: {
+		type: (type: string) => T | void;
+		detail: (detail: unknown) => D | void;
+	};
 }
 
 export type EventHandlerWithDefinition<
@@ -33,24 +40,44 @@ export type EventHandlerWithDefinition<
 	definition: EventHandlerDefinition;
 };
 
-export function EventHandler<T extends EventBridgeEvent<string, any>>(
-	options: EventHandlerOptions<T>,
-	handler: AsyncHandler<EventHandlerEvent<T>, void>,
-): EventHandlerWithDefinition<T> {
-	const { validator, ...definition } = options;
+export function EventHandler<T extends string, D extends unknown>(
+	options: EventHandlerOptions<T, D>,
+	handler: AsyncHandler<EventHandlerEvent<EventBridgeEvent<T, D>>, void>,
+): EventHandlerWithDefinition<EventBridgeEvent<T, D>> {
+	const { validator, validators, ...definition } = options;
 
-	const wrappedHandler: EventBridgeHandler<
-		T['detail-type'],
-		T['detail'],
-		void
-	> = async (event, context) => {
+	const wrappedHandler: EventBridgeHandler<T, D, void> = async (
+		event,
+		context,
+	) => {
 		try {
-			const validDetail = validator(event);
-			if (!validDetail) {
-				throw new Error('Invalid event detail');
-			}
+			if (validators) {
+				const validDetail = validators.detail(event.detail);
+				if (!validDetail) {
+					throw new Error('Invalid event detail');
+				}
+				const validType = validators.type(event['detail-type']);
+				if (!validType) {
+					throw new Error('Invalid event detail type');
+				}
 
-			await handler(validDetail, context);
+				const validEvent: EventBridgeEvent<T, D> = {
+					...event,
+					'detail-type': validType,
+					detail: validDetail,
+				};
+
+				await handler(validEvent, context);
+			} else if (validator) {
+				const validDetail = validator(event);
+				if (!validDetail) {
+					throw new Error('Invalid event detail');
+				}
+
+				await handler(validDetail, context);
+			} else {
+				await handler(event, context);
+			}
 		} catch (error) {
 			console.error(error);
 			return;

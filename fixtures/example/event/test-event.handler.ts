@@ -1,4 +1,3 @@
-import { EventBridgeEvent } from 'aws-lambda';
 import { EventHandler } from '../../../handlers';
 
 interface User {
@@ -15,8 +14,15 @@ export const handler = EventHandler(
 		eventBusName: 'event-bus-name',
 		memorySize: 1024,
 		timeout: 900,
-		validator: (body) => {
-			return body as EventBridgeEvent<'Some user was added type', User>;
+		/**
+		 * Deprecated validator
+		 */
+		// validator: (body) => {
+		// 	return body as EventBridgeEvent<'Some user was added type', User>;
+		// },
+		validators: {
+			type: (type) => type as 'Some user was added type',
+			detail: (detail) => detail as User,
 		},
 	},
 	async (event) => {
