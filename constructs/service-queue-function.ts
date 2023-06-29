@@ -65,6 +65,7 @@ export class ServiceQueueFunction extends BaseFunction<QueueHandlerDefinition> {
 				? cdk.Duration.seconds(definition.maxBatchingWindow)
 				: undefined,
 			reportBatchItemFailures: true,
+			maxConcurrency: definition.maxConcurrency,
 		});
 		this.addEventSource(this.eventSource);
 	}
