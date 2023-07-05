@@ -46,6 +46,11 @@ export interface QueueHandlerDefinition extends HandlerDefinition {
 	 * @default 10
 	 */
 	maximumAttempts?: number;
+
+	/**
+	 * The max number of concurrent invocations for the SQSHandler
+	 */
+	maxConcurrency?: number;
 }
 
 export type QueueHandlerEvent<T> = {
