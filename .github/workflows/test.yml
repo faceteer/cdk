@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [14.x, 16.x]
+        node-version: [16.x, 18.x, 20.x]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -45,7 +45,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ matrix.node-version }}
           AWS_SECRET_ACCESS_KEY: ${{ matrix.node-version }}
-          AWS_DEFAULT_REGION: "us-east-1"
+          AWS_DEFAULT_REGION: 'us-east-1'
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Build
