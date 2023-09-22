@@ -365,6 +365,10 @@ export class LambdaService extends Construct implements iam.IGrantable {
 					`TOPIC_${constantCase(notificationHandler.topicName)}`,
 					topic.topicName,
 				);
+				this.environmentVariables.set(
+					`TOPIC_${constantCase(notificationHandler.topicName)}_ARN`,
+					topic.topicArn,
+				);
 				topic.grantPublish(role);
 			}
 			const notificationFn = new ServiceNotificationFunction(
