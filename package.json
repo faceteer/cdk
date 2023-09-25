@@ -1,5 +1,5 @@
 {
-	"name": "@faceteer/cdk",
+	"name": "@tailwind/faceteer-cdk",
 	"version": "5.0.1",
 	"description": "CDK 2.0 constructs and helpers that make composing a Lambda powered service easier.",
 	"main": "index.js",
@@ -29,19 +29,18 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/faceteer/cdk.git"
+		"url": "git+https://github.com/tailwind/faceteer-cdk.git"
 	},
 	"keywords": [
 		"CDK",
 		"AWS",
 		"Lambda"
 	],
-	"author": "Alex McKenzie",
 	"license": "MIT",
 	"bugs": {
-		"url": "https://github.com/faceteer/cdk/issues"
+		"url": "https://github.com/tailwind/faceteer-cdk/issues"
 	},
-	"homepage": "https://github.com/faceteer/cdk#readme",
+	"homepage": "https://github.com/tailwind/faceteer-cdk#readme",
 	"devDependencies": {
 		"@types/aws-lambda": "^8.10.86",
 		"@types/jest": "^27.0.1",
