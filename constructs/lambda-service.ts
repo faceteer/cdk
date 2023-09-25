@@ -352,36 +352,61 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			this.functions.push(eventFn);
 		}
 
-		for (const notificationHandler of Object.values(handlers.notification)) {
-			/**
-			 * Create any notification handlers along with any topics that
-			 * haven't been created yet
-			 */
-			let topic = this.snsTopics.get(notificationHandler.topicName);
+		const createTopic = (topicName: string) => {
+			if (!role) {
+				throw new Error('Role not defined!');
+			}
+
+			let topic = this.snsTopics.get(topicName);
 			if (!topic) {
-				topic = new sns.Topic(this, notificationHandler.topicName);
-				this.snsTopics.set(notificationHandler.topicName, topic);
+				topic = new sns.Topic(this, topicName);
+				this.snsTopics.set(topicName, topic);
 				this.environmentVariables.set(
-					`TOPIC_${constantCase(notificationHandler.topicName)}`,
+					`TOPIC_${constantCase(topicName)}`,
 					topic.topicName,
 				);
 				this.environmentVariables.set(
-					`TOPIC_${constantCase(notificationHandler.topicName)}_ARN`,
+					`TOPIC_${constantCase(topicName)}_ARN`,
 					topic.topicArn,
 				);
 				topic.grantPublish(role);
 			}
-			const notificationFn = new ServiceNotificationFunction(
-				this,
-				notificationHandler.name,
-				{
-					...baseFunctionProps,
-					definition: notificationHandler,
-					topic,
-				},
-			);
 
-			this.functions.push(notificationFn);
+			return topic;
+		};
+
+		for (const notificationHandler of Object.values(handlers.notification)) {
+			// Deprecated behavior
+			if (!notificationHandler.topics.length && notificationHandler.topicName) {
+				const topic = createTopic(notificationHandler.topicName);
+				const notificationFn = new ServiceNotificationFunction(
+					this,
+					notificationHandler.name,
+					{
+						...baseFunctionProps,
+						definition: notificationHandler,
+						topics: [topic],
+					},
+				);
+				this.functions.push(notificationFn);
+			} else {
+				// eslint-disable-next-line camelcase
+				const topics: cdk.aws_sns.Topic[] = [];
+				for (const topicName of notificationHandler.topics) {
+					topics.push(createTopic(topicName));
+				}
+
+				const notificationFn = new ServiceNotificationFunction(
+					this,
+					notificationHandler.name,
+					{
+						...baseFunctionProps,
+						definition: notificationHandler,
+						topics,
+					},
+				);
+				this.functions.push(notificationFn);
+			}
 		}
 
 		for (const cronHandler of Object.values(handlers.cron)) {

@@ -6,15 +6,25 @@ import { InvalidMessage, ValidatedMessage } from './message';
 export interface NotificationHandlerDefinition extends HandlerDefinition {
 	/** The name of the function */
 	name: string;
-	/** The name of the SNS topic that the function is subscribed to */
-	topicName: string;
+	/**
+	 * The name of the SNS topic that the function is subscribed to.
+	 * @deprecated Use `topics` instead.
+	 */
+	topicName?: string;
+	/**
+	 * The topics to which this handler is subscribed.
+	 */
+	topics: Readonly<string[]>;
 	/** An optional filter policy for the function */
 	filterPolicy?: SnsEventSourceProps['filterPolicy'];
 }
 
 export interface NotificationHandlerOptions<T>
 	extends NotificationHandlerDefinition {
-	validator?: (messageBody: any) => T;
+	/**
+	 * The validator must be able to validate any topic in the `topics` array.
+	 */
+	validator?: (topicName: string, messageBody: unknown) => T;
 }
 
 export type NotificationHandlerWithDefinition = SNSHandler & {
@@ -37,7 +47,7 @@ export type NotificationEvent<T> = SNSEvent & {
 	InvalidMessages: InvalidMessage[];
 };
 
-export function NotificationHandler<T = unknown>(
+export function NotificationHandler<T>(
 	options: NotificationHandlerOptions<T>,
 	handler: AsyncHandler<NotificationEvent<T>, void>,
 ): NotificationHandlerWithDefinition {
@@ -52,7 +62,10 @@ export function NotificationHandler<T = unknown>(
 		try {
 			for (const record of event.Records) {
 				try {
-					const validRecord = validator(JSON.parse(record.Sns.Message));
+					const validRecord = validator(
+						record.Sns.Type,
+						JSON.parse(record.Sns.Message),
+					);
 					notificationEvent.ValidMessages.push({
 						attempts: 0,
 						body: validRecord,
