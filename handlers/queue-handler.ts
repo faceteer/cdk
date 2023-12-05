@@ -51,6 +51,11 @@ export interface QueueHandlerDefinition extends HandlerDefinition {
 	 * The max number of concurrent invocations for the SQSHandler
 	 */
 	maxConcurrency?: number;
+
+	/**
+	 * Is this a fifo queue? defaults to false
+	 */
+	fifo?: boolean;
 }
 
 export type QueueHandlerEvent<T> = {

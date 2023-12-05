@@ -54,6 +54,7 @@ export class ServiceQueueFunction extends BaseFunction<QueueHandlerDefinition> {
 				maxReceiveCount: maximumAttempts,
 				queue: this.dlq,
 			},
+			fifo: definition.fifo,
 		});
 
 		this.queue.grantSendMessages(role);
