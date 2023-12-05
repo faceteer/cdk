@@ -147,6 +147,8 @@ describe('Queue Handler', () => {
 
 		expect(internalHandler).toBeCalled();
 		expect(mockSend).toBeCalled();
+		const args = mockSend.mock.calls[0][0];
+		expect(args.input.QueueUrl).toEqual(QueueManager.getUris('test-queue').uri);
 		if (results) {
 			expect(results.batchItemFailures.length).toBe(0);
 		}
@@ -219,6 +221,28 @@ describe('Queue Handler', () => {
 		expect(result.Sent.length).toBe(900);
 		expect(result.Failed.length).toBe(100);
 		expect(mockSend).toBeCalledTimes(100);
+	});
+
+	test('Items can be sent directly to the DLQ', async () => {
+		const pullUserEvents: Message<PullUserEvent>[] = [
+			{
+				attempts: 0,
+				body: { userId: `known-bad-user`, token: Date.now().toString(16) },
+			},
+		];
+
+		const result = await QueueManager.send<PullUserEvent>(
+			sqs,
+			'test-queue',
+			pullUserEvents,
+			{
+				directlyToDLQ: true,
+			},
+		);
+		expect(result.Sent.length).toBe(1);
+		expect(result.Failed.length).toBe(0);
+		const args = mockSend.mock.calls[0][0];
+		expect(args.input.QueueUrl).toEqual(QueueManager.getUris('test-queue').dlq);
 	});
 });
 
