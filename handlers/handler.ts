@@ -59,9 +59,9 @@ export interface HandlerDefinition {
 	 * here as well. Check the AWS Lambda documentation for the supported nodejs
 	 * runtimes: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html
 	 *
-	 * Defaults to nodejs14.x if not specified.
+	 * Defaults to nodejs20.x if not specified.
 	 */
-	runtime?: 'nodejs14.x' | 'nodejs16.x' | 'nodejs18.x';
+	runtime?: 'nodejs18.x' | 'nodejs20.x' | 'nodejs22.x';
 	/**
 	 * The AWS Lambda architecture to use for functions.
 	 *
