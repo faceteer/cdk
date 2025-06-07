@@ -168,3 +168,5 @@ util/**/*.js
 util/**/*.d.ts
 index.js
 index.d.ts
+
+.npmrc
