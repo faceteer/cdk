@@ -104,8 +104,8 @@ describe('Queue Handler', () => {
 			() => {},
 		);
 
-		expect(internalHandler).toBeCalled();
-		expect(mockSend).toBeCalledTimes(0);
+		expect(internalHandler).toHaveBeenCalled();
+		expect(mockSend).toHaveBeenCalledTimes(0);
 		if (results) {
 			expect(results.batchItemFailures.length).toBe(0);
 		}
@@ -145,8 +145,8 @@ describe('Queue Handler', () => {
 			() => {},
 		);
 
-		expect(internalHandler).toBeCalled();
-		expect(mockSend).toBeCalled();
+		expect(internalHandler).toHaveBeenCalled();
+		expect(mockSend).toHaveBeenCalled();
 		if (results) {
 			expect(results.batchItemFailures.length).toBe(0);
 		}
@@ -186,8 +186,8 @@ describe('Queue Handler', () => {
 			() => {},
 		);
 
-		expect(internalHandler).toBeCalled();
-		expect(mockSend).toBeCalledTimes(0);
+		expect(internalHandler).toHaveBeenCalled();
+		expect(mockSend).toHaveBeenCalledTimes(0);
 		if (results) {
 			expect(results.batchItemFailures.length).toBe(1);
 		}
@@ -218,7 +218,7 @@ describe('Queue Handler', () => {
 
 		expect(result.Sent.length).toBe(900);
 		expect(result.Failed.length).toBe(100);
-		expect(mockSend).toBeCalledTimes(100);
+		expect(mockSend).toHaveBeenCalledTimes(100);
 	});
 });
 
