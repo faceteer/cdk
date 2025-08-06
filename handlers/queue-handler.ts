@@ -145,8 +145,13 @@ export class QueueManager {
 	 *
 	 * This is assuming that environment variables are set for the
 	 * queue names. The environment variables should be the queue name
-	 * converted to constant case
-	 * @param queueName
+	 * converted to constant case.
+	 *
+	 * If SQS_ENDPOINT environment variable is set, it will be used
+	 * for local development (e.g., ElasticMQ at http://localhost:9324).
+	 * Otherwise, it constructs standard AWS SQS URLs.
+	 *
+	 * @param queueName The name of the queue
 	 */
 	static getUris(queueName: string) {
 		const queueEnvironmentVariable = `QUEUE_${constantCase(queueName)}`;
@@ -159,6 +164,16 @@ export class QueueManager {
 			throw new Error(`Environment variables not set for queue ${queueName}`);
 		}
 
+		// If SQS_ENDPOINT is set, use it for local development (e.g., ElasticMQ)
+		const sqsEndpoint = process.env.SQS_ENDPOINT;
+		if (sqsEndpoint) {
+			return {
+				uri: `${sqsEndpoint}/queue/${name}`,
+				dlq: `${sqsEndpoint}/queue/${dlqName}`,
+			};
+		}
+
+		// Default AWS SQS endpoint construction
 		return {
 			uri: `https://sqs.${process.env.AWS_REGION}.amazonaws.com/${process.env.ACCOUNT_ID}/${name}`,
 			dlq: `https://sqs.${process.env.AWS_REGION}.amazonaws.com/${process.env.ACCOUNT_ID}/${dlqName}`,

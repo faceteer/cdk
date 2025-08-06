@@ -1,20 +1,24 @@
 import { ApiHandler } from '../../../handlers/api-handler';
 import { SuccessResponse } from '../../../response/success-response';
-import type { JSONSchemaType } from 'ajv';
 
 interface User {
 	userId: string;
 	email: string;
 }
 
-const UserSchema: JSONSchemaType<User> = {
-	type: 'object',
-	properties: {
-		userId: { type: 'string' },
-		email: { type: 'string' },
-	},
-	required: ['email', 'userId'],
-};
+function validateUser(body: unknown): User {
+	if (!body || typeof body !== 'object') {
+		throw new Error('Body must be an object');
+	}
+	const { userId, email } = body as any;
+	if (!userId || typeof userId !== 'string') {
+		throw new Error('userId is required');
+	}
+	if (!email || typeof email !== 'string') {
+		throw new Error('email is required');
+	}
+	return { userId, email };
+}
 
 export const handler = ApiHandler(
 	{
@@ -23,8 +27,8 @@ export const handler = ApiHandler(
 		route: '/users/{userId}',
 		description: 'Get a user',
 		memorySize: 512,
-		schemas: {
-			body: UserSchema,
+		validators: {
+			body: validateUser,
 		},
 		pathParameters: ['userId'],
 	},

@@ -36,7 +36,7 @@ describe('Event Handler', () => {
 		);
 
 		await handler(mockEventBridgeEvent(user), {} as any, () => {});
-		expect(internalHandler).toBeCalled();
+		expect(internalHandler).toHaveBeenCalled();
 	});
 
 	test('Handles invalid messages', async () => {
@@ -68,7 +68,7 @@ describe('Event Handler', () => {
 
 		await handler(mockEventBridgeEvent(user), {} as any, () => {});
 
-		expect(internalHandler).toBeCalledTimes(0);
+		expect(internalHandler).toHaveBeenCalledTimes(0);
 	});
 
 	let mockCounter = 0;

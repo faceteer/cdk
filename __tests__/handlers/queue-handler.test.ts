@@ -104,8 +104,8 @@ describe('Queue Handler', () => {
 			() => {},
 		);
 
-		expect(internalHandler).toBeCalled();
-		expect(mockSend).toBeCalledTimes(0);
+		expect(internalHandler).toHaveBeenCalled();
+		expect(mockSend).toHaveBeenCalledTimes(0);
 		if (results) {
 			expect(results.batchItemFailures.length).toBe(0);
 		}
@@ -145,8 +145,8 @@ describe('Queue Handler', () => {
 			() => {},
 		);
 
-		expect(internalHandler).toBeCalled();
-		expect(mockSend).toBeCalled();
+		expect(internalHandler).toHaveBeenCalled();
+		expect(mockSend).toHaveBeenCalled();
 		if (results) {
 			expect(results.batchItemFailures.length).toBe(0);
 		}
@@ -186,8 +186,8 @@ describe('Queue Handler', () => {
 			() => {},
 		);
 
-		expect(internalHandler).toBeCalled();
-		expect(mockSend).toBeCalledTimes(0);
+		expect(internalHandler).toHaveBeenCalled();
+		expect(mockSend).toHaveBeenCalledTimes(0);
 		if (results) {
 			expect(results.batchItemFailures.length).toBe(1);
 		}
@@ -218,7 +218,96 @@ describe('Queue Handler', () => {
 
 		expect(result.Sent.length).toBe(900);
 		expect(result.Failed.length).toBe(100);
-		expect(mockSend).toBeCalledTimes(100);
+		expect(mockSend).toHaveBeenCalledTimes(100);
+	});
+
+	describe('SQS_ENDPOINT support', () => {
+		test('Uses AWS endpoints when SQS_ENDPOINT is not set', () => {
+			const originalSqsEndpoint = process.env.SQS_ENDPOINT;
+			const originalAwsRegion = process.env.AWS_REGION;
+			const originalAccountId = process.env.ACCOUNT_ID;
+			const originalQueueVar = process.env.QUEUE_TEST_QUEUE;
+			const originalDlqVar = process.env.DLQ_TEST_QUEUE;
+
+			try {
+				// Set required environment variables
+				process.env.AWS_REGION = 'us-east-1';
+				process.env.ACCOUNT_ID = '123456789012';
+				process.env.QUEUE_TEST_QUEUE = 'my-queue';
+				process.env.DLQ_TEST_QUEUE = 'my-queue-dlq';
+				delete process.env.SQS_ENDPOINT;
+
+				const uris = QueueManager.getUris('testQueue');
+
+				expect(uris.uri).toBe(
+					'https://sqs.us-east-1.amazonaws.com/123456789012/my-queue',
+				);
+				expect(uris.dlq).toBe(
+					'https://sqs.us-east-1.amazonaws.com/123456789012/my-queue-dlq',
+				);
+			} finally {
+				// Restore original values
+				if (originalSqsEndpoint) process.env.SQS_ENDPOINT = originalSqsEndpoint;
+				if (originalAwsRegion) process.env.AWS_REGION = originalAwsRegion;
+				if (originalAccountId) process.env.ACCOUNT_ID = originalAccountId;
+				if (originalQueueVar) process.env.QUEUE_TEST_QUEUE = originalQueueVar;
+				if (originalDlqVar) process.env.DLQ_TEST_QUEUE = originalDlqVar;
+			}
+		});
+
+		test('Uses custom endpoint when SQS_ENDPOINT is set', () => {
+			const originalSqsEndpoint = process.env.SQS_ENDPOINT;
+			const originalQueueVar = process.env.QUEUE_TEST_QUEUE;
+			const originalDlqVar = process.env.DLQ_TEST_QUEUE;
+
+			try {
+				// Set required environment variables
+				process.env.SQS_ENDPOINT = 'http://localhost:9324';
+				process.env.QUEUE_TEST_QUEUE = 'my-queue';
+				process.env.DLQ_TEST_QUEUE = 'my-queue-dlq';
+
+				const uris = QueueManager.getUris('testQueue');
+
+				expect(uris.uri).toBe('http://localhost:9324/queue/my-queue');
+				expect(uris.dlq).toBe('http://localhost:9324/queue/my-queue-dlq');
+			} finally {
+				// Restore original values
+				if (originalSqsEndpoint) {
+					process.env.SQS_ENDPOINT = originalSqsEndpoint;
+				} else {
+					delete process.env.SQS_ENDPOINT;
+				}
+				if (originalQueueVar) process.env.QUEUE_TEST_QUEUE = originalQueueVar;
+				if (originalDlqVar) process.env.DLQ_TEST_QUEUE = originalDlqVar;
+			}
+		});
+
+		test('Works with different local SQS endpoints', () => {
+			const originalSqsEndpoint = process.env.SQS_ENDPOINT;
+			const originalQueueVar = process.env.QUEUE_USER_UPDATES;
+			const originalDlqVar = process.env.DLQ_USER_UPDATES;
+
+			try {
+				// Test with different endpoint format
+				process.env.SQS_ENDPOINT = 'https://elasticmq.example.com:9325';
+				process.env.QUEUE_USER_UPDATES = 'user-updates';
+				process.env.DLQ_USER_UPDATES = 'user-updates-dlq';
+
+				const uris = QueueManager.getUris('userUpdates');
+
+				expect(uris.uri).toBe('https://elasticmq.example.com:9325/queue/user-updates');
+				expect(uris.dlq).toBe('https://elasticmq.example.com:9325/queue/user-updates-dlq');
+			} finally {
+				// Restore original values
+				if (originalSqsEndpoint) {
+					process.env.SQS_ENDPOINT = originalSqsEndpoint;
+				} else {
+					delete process.env.SQS_ENDPOINT;
+				}
+				if (originalQueueVar) process.env.QUEUE_USER_UPDATES = originalQueueVar;
+				if (originalDlqVar) process.env.DLQ_USER_UPDATES = originalDlqVar;
+			}
+		});
 	});
 });
 

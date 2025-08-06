@@ -1,7 +1,5 @@
 import { ApiHandler } from '../../handlers/api-handler';
 import { SuccessResponse } from '../../response/success-response';
-
-import Ajv, { JSONSchemaType } from 'ajv';
 import { invariant } from '../../util/invariant';
 
 interface User {
@@ -9,33 +7,35 @@ interface User {
 	name: string;
 }
 
-const ajv = new Ajv({
-	removeAdditional: 'all',
-	coerceTypes: true,
-});
-
-const UserSchema: JSONSchemaType<User> = {
-	type: 'object',
-	properties: {
-		id: { type: 'string' },
-		name: { type: 'string' },
-	},
-	required: ['id', 'name'],
-};
-
 interface PutUserQuery {
 	force?: boolean;
 }
 
-const PutUserQuerySchema: JSONSchemaType<PutUserQuery> = {
-	type: 'object',
-	properties: {
-		force: { type: 'boolean', nullable: true },
-	},
-};
+// Simple validation functions
+function validateUser(body: unknown): User {
+	if (!body || typeof body !== 'object') {
+		throw new Error('Body must be an object');
+	}
+	const { id, name } = body as any;
+	if (!id || typeof id !== 'string') {
+		throw new Error('id is required and must be a string');
+	}
+	if (!name || typeof name !== 'string') {
+		throw new Error('name is required and must be a string');
+	}
+	return { id, name };
+}
+
+function validateQuery(query: unknown): PutUserQuery {
+	if (!query || typeof query !== 'object') {
+		return {};
+	}
+	const { force } = query as any;
+	return { force: force === 'true' || force === true };
+}
 
 describe('Api Handler', () => {
-	test('Api Handler with schemas validates', async () => {
+	test('Api Handler with validators validates', async () => {
 		const requestBody = {
 			id: '545467',
 			name: 'jeremy',
@@ -46,10 +46,9 @@ describe('Api Handler', () => {
 				name: 'putUser',
 				method: 'PUT',
 				route: '/users/{userId}',
-				schemas: {
-					body: UserSchema,
-					response: UserSchema,
-					query: PutUserQuerySchema,
+				validators: {
+					body: validateUser,
+					query: validateQuery,
 				},
 				pathParameters: ['userId'] as const,
 			},
@@ -87,7 +86,7 @@ describe('Api Handler', () => {
 		}
 	});
 
-	test('Api Handler with schemas validates', async () => {
+	test('Api Handler with validators validates with query', async () => {
 		const requestBody = {
 			id: '545467',
 			name: 'jeremy',
@@ -99,24 +98,8 @@ describe('Api Handler', () => {
 				method: 'PUT',
 				route: '/users/{userId}',
 				validators: {
-					body: (body) => {
-						const validate = ajv.compile(UserSchema);
-						if (!validate(body)) {
-							const [validationError] = validate.errors ?? [];
-							throw validationError;
-						} else {
-							return body;
-						}
-					},
-					query: (query) => {
-						const validate = ajv.compile(PutUserQuerySchema);
-						if (!validate(query)) {
-							const [validationError] = validate.errors ?? [];
-							throw validationError;
-						} else {
-							return query;
-						}
-					},
+					body: validateUser,
+					query: validateQuery,
 				},
 				pathParameters: ['userId'] as const,
 			},
@@ -154,7 +137,7 @@ describe('Api Handler', () => {
 		}
 	});
 
-	test('Api Handler with schemas still validates with empty query', async () => {
+	test('Api Handler with validators still validates with empty query', async () => {
 		const requestBody = {
 			id: '545467',
 			name: 'jeremy',
@@ -166,32 +149,15 @@ describe('Api Handler', () => {
 				method: 'PUT',
 				route: '/users/{userId}',
 				validators: {
-					body: (body) => {
-						const validate = ajv.compile(UserSchema);
-						if (!validate(body)) {
-							const [validationError] = validate.errors ?? [];
-							throw validationError;
-						} else {
-							return body;
-						}
-					},
-					query: (query) => {
-						console.log('query', query);
-						const validate = ajv.compile(PutUserQuerySchema);
-						if (!validate(query)) {
-							const [validationError] = validate.errors ?? [];
-							throw validationError;
-						} else {
-							return query;
-						}
-					},
+					body: validateUser,
+					query: validateQuery,
 				},
 				pathParameters: ['userId'] as const,
 			},
 			async (event) => {
 				const user = event.input.body;
 				expect(event.input.path.userId).toBe(requestBody.id);
-				expect(event.input.query.force).toBeUndefined();
+				expect(event.input.query.force).toBeFalsy();
 
 				return SuccessResponse(user);
 			},
@@ -216,52 +182,6 @@ describe('Api Handler', () => {
 				headers: {
 					'Content-Type': 'application/json',
 				},
-			});
-		}
-	});
-
-	test('Api Handler with Schemas Handles Invalid Requests', async () => {
-		const handler = ApiHandler(
-			{
-				name: 'putUser',
-				method: 'PUT',
-				route: '/users/{userId}',
-				schemas: {
-					body: UserSchema,
-					response: UserSchema,
-				},
-			},
-			async (event) => {
-				const user = event.input.body;
-
-				return SuccessResponse(user);
-			},
-		);
-		const requestBody = {
-			bad: 'key',
-		};
-
-		const response = await handler(
-			{
-				queryStringParameters: { force: true },
-				body: JSON.stringify(requestBody),
-			} as any,
-			{} as any,
-			() => {},
-		);
-
-		expect(response).toBeTruthy();
-		if (response && typeof response !== 'string') {
-			expect(response.statusCode).toEqual(400);
-			const body = JSON.parse(response.body ?? '{}');
-			expect(body).toEqual({
-				instancePath: '',
-				schemaPath: '#/required',
-				keyword: 'required',
-				params: {
-					missingProperty: 'id',
-				},
-				message: "must have required property 'id'",
 			});
 		}
 	});
@@ -273,15 +193,7 @@ describe('Api Handler', () => {
 				method: 'PUT',
 				route: '/users/{userId}',
 				validators: {
-					body: (body) => {
-						const validate = ajv.compile(UserSchema);
-						if (!validate(body)) {
-							const [validationError] = validate.errors ?? [];
-							throw validationError;
-						} else {
-							return body;
-						}
-					},
+					body: validateUser,
 				},
 			},
 			async (event) => {
@@ -307,15 +219,44 @@ describe('Api Handler', () => {
 		if (response && typeof response !== 'string') {
 			expect(response.statusCode).toEqual(400);
 			const body = JSON.parse(response.body ?? '{}');
-			expect(body).toEqual({
-				instancePath: '',
-				schemaPath: '#/required',
-				keyword: 'required',
-				params: {
-					missingProperty: 'id',
+			expect(body.message).toContain('id is required');
+		}
+	});
+
+	test('Api Handler with Validators Handles Invalid Requests', async () => {
+		const handler = ApiHandler(
+			{
+				name: 'putUser',
+				method: 'PUT',
+				route: '/users/{userId}',
+				validators: {
+					body: validateUser,
 				},
-				message: "must have required property 'id'",
-			});
+			},
+			async (event) => {
+				const user = event.input.body;
+
+				return SuccessResponse(user);
+			},
+		);
+		const requestBody = {
+			bad: 'key',
+		};
+
+		const response = await handler(
+			{
+				queryStringParameters: { force: true },
+				body: JSON.stringify(requestBody),
+			} as any,
+			{} as any,
+			() => {},
+		);
+
+		expect(response).toBeTruthy();
+		if (response && typeof response !== 'string') {
+			expect(response.statusCode).toEqual(400);
+			const body = JSON.parse(response.body ?? '{}');
+			expect(body.message).toContain('id is required');
 		} else {
 			expect('water').toBe('wet');
 		}
@@ -327,10 +268,6 @@ describe('Api Handler', () => {
 				name: 'putUser',
 				method: 'PUT',
 				route: '/users/{userId}',
-				schemas: {
-					body: UserSchema,
-					response: UserSchema,
-				},
 				pathParameters: ['userId'] as const,
 			},
 			async (event) => {
@@ -366,10 +303,6 @@ describe('Api Handler', () => {
 				name: 'putUser',
 				method: 'PUT',
 				route: '/users/{userId}',
-				schemas: {
-					body: UserSchema,
-					response: UserSchema,
-				},
 				pathParameters: ['userId'] as const,
 			},
 			invalidHandler,
@@ -401,15 +334,14 @@ describe('Api Handler', () => {
 		}
 	});
 
-	test('Returns a 400 on schema validation failures', async () => {
+	test('Returns a 400 on validation failures', async () => {
 		const handler = ApiHandler(
 			{
 				name: 'putUser',
 				method: 'PUT',
 				route: '/users/{userId}',
-				schemas: {
-					body: UserSchema,
-					response: UserSchema,
+				validators: {
+					body: validateUser,
 				},
 				pathParameters: ['userId'] as const,
 			},
@@ -492,7 +424,6 @@ describe('Api Handler', () => {
 				name: 'getUser',
 				method: 'GET',
 				route: '/users/{userId}',
-				schemas: {},
 				pathParameters: ['userId'] as const,
 				authorizer: () => false,
 			},
@@ -524,7 +455,6 @@ describe('Api Handler', () => {
 				name: 'getUser',
 				method: 'GET',
 				route: '/users/{userId}',
-				schemas: {},
 				pathParameters: ['userId'] as const,
 				authorizer: (event) => {
 					return event.input.path.userId;

@@ -18,20 +18,8 @@ describe('Parse Handlers', () => {
 					description: 'Get a user',
 					memorySize: 512,
 					name: 'ApiGetUser',
-					validators: undefined,
-					schemas: {
-						body: {
-							type: 'object',
-							properties: {
-								userId: {
-									type: 'string',
-								},
-								email: {
-									type: 'string',
-								},
-							},
-							required: ['email', 'userId'],
-						},
+					validators: {
+						body: expect.any(Function),
 					},
 				}),
 				ApiGetUsere3a216: expect.objectContaining({
@@ -41,20 +29,10 @@ describe('Parse Handlers', () => {
 					description: 'Get some other user',
 					memorySize: 512,
 					name: 'ApiGetUsere3a216',
-					validators: undefined,
-					schemas: {
-						body: {
-							type: 'object',
-							properties: {
-								userId: {
-									type: 'string',
-								},
-								email: {
-									type: 'string',
-								},
-							},
-							required: ['email', 'userId'],
-						},
+					architecture: 'arm64',
+					runtime: 'nodejs18.x',
+					validators: {
+						body: expect.any(Function),
 					},
 				}),
 				ApiCreateUser: expect.objectContaining({
@@ -65,7 +43,6 @@ describe('Parse Handlers', () => {
 					disableAuth: true,
 					timeout: 900,
 					name: 'ApiCreateUser',
-					schemas: undefined,
 					validators: {
 						body: expect.any(Function),
 						response: expect.any(Function),
