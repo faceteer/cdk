@@ -313,6 +313,20 @@ service.addEnvironment('DATABASE_URL', databaseUrl);
 service.addEnvironment('API_KEY', apiKey);
 ```
 
+### Local Development with SQS
+
+The queue handler supports local SQS development using tools like ElasticMQ. Set the `SQS_ENDPOINT` environment variable to point to your local SQS instance:
+
+```bash
+# For ElasticMQ running locally
+export SQS_ENDPOINT=http://localhost:9324
+
+# Or in your .env file
+SQS_ENDPOINT=http://localhost:9324
+```
+
+When `SQS_ENDPOINT` is set, queue operations will use the custom endpoint instead of AWS SQS. This allows you to develop and test queue functionality locally without connecting to AWS.
+
 ## File Structure
 
 ```
