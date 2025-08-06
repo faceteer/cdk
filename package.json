@@ -70,7 +70,6 @@
 	},
 	"dependencies": {
 		"@aws-sdk/client-sqs": "^3.826.0",
-		"ajv": "^8.8.2",
 		"aws-cdk-lib": "^2.200.1",
 		"change-case": "^4.1.2",
 		"constructs": "^10.4.2",
