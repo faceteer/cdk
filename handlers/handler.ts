@@ -61,7 +61,7 @@ export interface HandlerDefinition {
 	 *
 	 * Defaults to nodejs20.x if not specified.
 	 */
-	runtime?: 'nodejs18.x' | 'nodejs20.x' | 'nodejs22.x';
+	runtime?: 'nodejs20.x' | 'nodejs22.x' | 'nodejs24.x';
 	/**
 	 * The AWS Lambda architecture to use for functions.
 	 *

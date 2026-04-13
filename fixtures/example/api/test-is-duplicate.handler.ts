@@ -33,7 +33,7 @@ export const handler = ApiHandler(
 		},
 		pathParameters: ['userId'],
 		architecture: 'arm64',
-		runtime: 'nodejs18.x',
+		runtime: 'nodejs24.x',
 	},
 	async (event) => {
 		console.log(event);

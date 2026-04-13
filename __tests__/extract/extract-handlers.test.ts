@@ -30,7 +30,7 @@ describe('Parse Handlers', () => {
 					memorySize: 512,
 					name: 'ApiGetUsere3a216',
 					architecture: 'arm64',
-					runtime: 'nodejs18.x',
+					runtime: 'nodejs24.x',
 					validators: {
 						body: expect.any(Function),
 					},
