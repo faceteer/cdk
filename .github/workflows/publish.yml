@@ -1,0 +1,60 @@
+# Publishes @faceteer/cdk to npm when a v* tag is pushed.
+# Authenticates via npm Trusted Publishing (OIDC) — no NPM_TOKEN required.
+# See plan: how a release is cut with main protected, and the prerelease convention.
+
+name: Publish
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Upgrade npm (OIDC requires >= 11.5.1)
+        run: npm install -g npm@latest
+
+      - name: Install
+        run: npm install
+
+      - name: Run Jest Tests
+        run: npm test
+        env:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: 'us-east-1'
+
+      - name: Verify tag matches package.json version
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json ($PKG_VERSION)" >&2
+            exit 1
+          fi
+
+      - name: Determine dist-tag
+        id: disttag
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          case "$VERSION" in
+            *-alpha*) echo "tag=alpha" >> "$GITHUB_OUTPUT" ;;
+            *-beta*)  echo "tag=beta"  >> "$GITHUB_OUTPUT" ;;
+            *-rc*)    echo "tag=rc"    >> "$GITHUB_OUTPUT" ;;
+            *)        echo "tag=latest" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Publish to npm
+        run: npm publish --tag ${{ steps.disttag.outputs.tag }}

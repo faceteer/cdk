@@ -1,6 +1,6 @@
 {
 	"name": "@faceteer/cdk",
-	"version": "8.0.0",
+	"version": "8.0.1-alpha.0",
 	"description": "CDK 2.0 constructs and helpers that make composing a Lambda powered service easier.",
 	"main": "index.js",
 	"files": [
@@ -26,6 +26,9 @@
 	},
 	"engines": {
 		"node": ">=20"
+	},
+	"publishConfig": {
+		"access": "public"
 	},
 	"repository": {
 		"type": "git",
