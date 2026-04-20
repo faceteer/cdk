@@ -24,8 +24,19 @@ jobs:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Upgrade npm (OIDC requires >= 11.5.1)
-        run: npm install -g npm@latest
+      - name: Install npm >= 11.5.1 (OIDC requires it)
+        # Self-upgrading the bundled npm (`npm install -g npm@latest`) is known
+        # to break mid-install on GitHub runners ("Cannot find module
+        # 'promise-retry'"). Install into an isolated prefix and prepend to PATH
+        # instead — avoids replacing the running npm.
+        run: |
+          NPM_DIR="$RUNNER_TEMP/npm-latest"
+          mkdir -p "$NPM_DIR"
+          npm install --prefix "$NPM_DIR" --no-save --no-audit --no-fund npm@latest
+          echo "$NPM_DIR/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Show npm version
+        run: npm --version
 
       - name: Install
         run: npm install
