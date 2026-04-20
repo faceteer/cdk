@@ -43,34 +43,30 @@ export function NotificationHandler<T = unknown>(
 ): NotificationHandlerWithDefinition {
 	const { validator = defaultValidator, ...definition } = options;
 
-	const wrappedHandler: SNSHandler = async (event, context, callback) => {
+	const wrappedHandler: SNSHandler = async (event, context) => {
 		const notificationEvent: NotificationEvent<T> = {
 			Records: event.Records,
 			InvalidMessages: [],
 			ValidMessages: [],
 		};
-		try {
-			for (const record of event.Records) {
-				try {
-					const validRecord = validator(JSON.parse(record.Sns.Message));
-					notificationEvent.ValidMessages.push({
-						attempts: 0,
-						body: validRecord,
-						messageId: record.Sns.MessageId,
-					});
-				} catch (error) {
-					notificationEvent.InvalidMessages.push({
-						attempts: 0,
-						body: record.Sns.Message,
-						error,
-						messageId: record.Sns.MessageId,
-					});
-				}
+		for (const record of event.Records) {
+			try {
+				const validRecord = validator(JSON.parse(record.Sns.Message));
+				notificationEvent.ValidMessages.push({
+					attempts: 0,
+					body: validRecord,
+					messageId: record.Sns.MessageId,
+				});
+			} catch (error) {
+				notificationEvent.InvalidMessages.push({
+					attempts: 0,
+					body: record.Sns.Message,
+					error,
+					messageId: record.Sns.MessageId,
+				});
 			}
-			await handler(notificationEvent, context);
-		} catch (error) {
-			callback(error as any);
 		}
+		await handler(notificationEvent, context);
 	};
 
 	return Object.assign(wrappedHandler, {
