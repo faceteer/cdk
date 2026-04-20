@@ -18,22 +18,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Use Node.js 22
+      - name: Use Node.js 24
+        # Node 24 bundles npm 11.x. OIDC Trusted Publishing needs npm >= 11.5.1,
+        # so if the bundled npm is recent enough we avoid a global upgrade step
+        # (which is fragile on GitHub runners). `Show npm version` below makes
+        # the actual bundled version visible in the run log.
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
-
-      - name: Install npm >= 11.5.1 (OIDC requires it)
-        # Self-upgrading the bundled npm (`npm install -g npm@latest`) is known
-        # to break mid-install on GitHub runners ("Cannot find module
-        # 'promise-retry'"). Install into an isolated prefix and prepend to PATH
-        # instead — avoids replacing the running npm.
-        run: |
-          NPM_DIR="$RUNNER_TEMP/npm-latest"
-          mkdir -p "$NPM_DIR"
-          npm install --prefix "$NPM_DIR" --no-save --no-audit --no-fund npm@latest
-          echo "$NPM_DIR/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Show npm version
         run: npm --version
