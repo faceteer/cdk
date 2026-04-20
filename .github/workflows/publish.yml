@@ -18,14 +18,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Use Node.js 22
+      - name: Use Node.js 24
+        # Node 24 bundles npm 11.x. OIDC Trusted Publishing needs npm >= 11.5.1,
+        # so if the bundled npm is recent enough we avoid a global upgrade step
+        # (which is fragile on GitHub runners). `Show npm version` below makes
+        # the actual bundled version visible in the run log.
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Upgrade npm (OIDC requires >= 11.5.1)
-        run: npm install -g npm@latest
+      - name: Show npm version
+        run: npm --version
 
       - name: Install
         run: npm install
