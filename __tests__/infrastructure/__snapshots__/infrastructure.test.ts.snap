@@ -7,6 +7,7 @@ exports[`Create Service Logical Ids remain unchanged 1`] = `
   "ExampleServiceApiCreateUser6E31DB0D",
   "ExampleServiceQueueUpdateUser725EDE63",
   "ExampleServiceEventUserAddedEventB025E55F",
+  "ExampleServiceStreamUsersAFEFD488",
   "ExampleServiceIncomingEmailSendToProcessQueue17229132",
   "ExampleServiceQueuePullsED3940BC",
 ]

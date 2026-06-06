@@ -1,6 +1,8 @@
 # Publishes @faceteer/cdk to npm when a v* tag is pushed.
 # Authenticates via npm Trusted Publishing (OIDC) — no NPM_TOKEN required.
-# See plan: how a release is cut with main protected, and the prerelease convention.
+# After publish, lifts the matching section out of CHANGELOG.md and uses it as
+# the body of the GitHub Release, so each version has discoverable notes.
+# See CLAUDE.md ("Releasing") for how a release is cut with main protected.
 
 name: Publish
 
@@ -13,17 +15,17 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: read
+      contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Use Node.js 24
         # Node 24 bundles npm 11.x. OIDC Trusted Publishing needs npm >= 11.5.1,
         # so if the bundled npm is recent enough we avoid a global upgrade step
         # (which is fragile on GitHub runners). `Show npm version` below makes
         # the actual bundled version visible in the run log.
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
@@ -60,5 +62,36 @@ jobs:
             *)        echo "tag=latest" >> "$GITHUB_OUTPUT" ;;
           esac
 
+      # Run before publishing so a missing CHANGELOG section for a stable
+      # release aborts the run *before* the irreversible npm publish.
+      - name: Extract release notes from CHANGELOG
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { inside=1; next }
+            inside && (/^## \[/ || /^\[[^]]+\]:/) { exit }
+            inside { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            if [ "${{ steps.disttag.outputs.tag }}" = "latest" ]; then
+              echo "CHANGELOG.md has no section for stable version $VERSION" >&2
+              exit 1
+            fi
+            # Prereleases (alpha/beta/rc) are often dry-runs without notes; use a
+            # generic body rather than failing the release.
+            echo "Prerelease $GITHUB_REF_NAME — see CHANGELOG.md for details." > release-notes.md
+          fi
+
       - name: Publish to npm
         run: npm publish --tag ${{ steps.disttag.outputs.tag }}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          FLAGS=(--title "$GITHUB_REF_NAME" --notes-file release-notes.md)
+          case "$VERSION" in
+            *-alpha*|*-beta*|*-rc*) FLAGS+=(--prerelease) ;;
+          esac
+          gh release create "$GITHUB_REF_NAME" "${FLAGS[@]}"

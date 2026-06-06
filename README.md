@@ -38,7 +38,7 @@ The main construct that orchestrates multiple Lambda functions. It automatically
 
 ### Handler Types
 
-The library supports 5 handler types, each creating different AWS integrations:
+The library supports 6 handler types, each creating different AWS integrations:
 
 #### 1. ApiHandler - HTTP API endpoints
 Creates Lambda functions integrated with API Gateway for REST endpoints.
@@ -155,6 +155,37 @@ export const handler = NotificationHandler(
 );
 ```
 
+#### 6. DynamoStreamHandler - DynamoDB stream processing
+Creates Lambda functions triggered by a DynamoDB table's stream. The table is
+referenced by name (see [Tables](#tables)); records are passed through raw (images
+stay in DynamoDB `AttributeValue` form).
+
+```typescript
+// src/handlers/user-changed.handler.ts
+import { DynamoStreamHandler } from '@faceteer/cdk';
+
+export const handler = DynamoStreamHandler(
+  {
+    tableName: 'users',
+    startingPosition: 'TRIM_HORIZON',
+  },
+  async (event) => {
+    const failed = [];
+    for (const record of event.Records) {
+      try {
+        console.log(record.eventName, record.dynamodb?.NewImage);
+      } catch (error) {
+        failed.push(record);
+      }
+    }
+    // Report records to retry. DynamoDB streams retry by checkpoint: Lambda
+    // rewinds to the earliest failure and redelivers everything after it, so
+    // your handler must be idempotent.
+    return { retry: failed };
+  }
+);
+```
+
 ### Handler Discovery
 
 The library automatically discovers handlers using the `extractHandlers` function:
@@ -253,6 +284,24 @@ new LambdaService(this, 'MyService', {
   eventBuses: {
     'user-events': EventBus.fromEventBusName(this, 'UserBus', 'user-events'),
     'order-events': new EventBus(this, 'OrderBus'),
+  },
+});
+```
+
+### Tables
+
+Configure the source tables for DynamoStreamHandlers. Each `DynamoStreamHandler`
+references a table by the key used here. The table must have a stream enabled;
+the framework does not create or own the table.
+
+```typescript
+new LambdaService(this, 'MyService', {
+  handlersFolder: './src/handlers',
+  tables: {
+    // key matches `tableName` in the handler definition
+    users: usersTable, // a dynamodb.Table created elsewhere, or
+    // Table.fromTableAttributes(this, 'Users', { tableName, tableStreamArn })
+    // to reference an existing table
   },
 });
 ```

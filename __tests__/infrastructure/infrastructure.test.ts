@@ -3,6 +3,7 @@ import { LambdaService } from '../../constructs';
 import { Construct } from 'constructs';
 import { App, Stack } from 'aws-cdk-lib';
 import { EventBus } from 'aws-cdk-lib/aws-events';
+import { AttributeType, StreamViewType, Table } from 'aws-cdk-lib/aws-dynamodb';
 import { Template } from 'aws-cdk-lib/assertions';
 
 class ExampleStack extends Stack {
@@ -17,6 +18,12 @@ class ExampleStack extends Stack {
 			handlersFolder: basePath,
 			eventBuses: {
 				'event-bus-name': new EventBus(this, 'ExampleBus'),
+			},
+			tables: {
+				users: new Table(this, 'UsersTable', {
+					partitionKey: { name: 'id', type: AttributeType.STRING },
+					stream: StreamViewType.NEW_AND_OLD_IMAGES,
+				}),
 			},
 		});
 	}

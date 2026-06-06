@@ -5,6 +5,8 @@ import * as path from 'path';
 import {
 	CronHandlerDefinition,
 	CronHandlerWithDefinition,
+	DynamoStreamHandlerDefinition,
+	DynamoStreamHandlerWithDefinition,
 	EventHandlerDefinition,
 	EventHandlerWithDefinition,
 	NotificationHandlerDefinition,
@@ -32,7 +34,8 @@ type AnyHandler =
 	| QueueHandlerWithDefinition<unknown>
 	| EventHandlerWithDefinition<EventBridgeEvent<string, unknown>>
 	| CronHandlerWithDefinition
-	| NotificationHandlerWithDefinition;
+	| NotificationHandlerWithDefinition
+	| DynamoStreamHandlerWithDefinition;
 
 function handlerName(handler: AnyHandler) {
 	switch (handler.type) {
@@ -48,6 +51,8 @@ function handlerName(handler: AnyHandler) {
 			return pascalCase(
 				`${handler.definition.topicName}-${handler.definition.name}`,
 			);
+		case HandlerTypes.DynamoStream:
+			return pascalCase(`Stream ${handler.definition.tableName}`);
 	}
 }
 
@@ -82,12 +87,17 @@ export function extractHandlers(basePath: string) {
 			FullHandlerDefinition<NotificationHandlerDefinition>
 		>;
 		cron: Record<string, FullHandlerDefinition<CronHandlerDefinition>>;
+		dynamoStream: Record<
+			string,
+			FullHandlerDefinition<DynamoStreamHandlerDefinition>
+		>;
 	} = {
 		api: {},
 		queue: {},
 		event: {},
 		notification: {},
 		cron: {},
+		dynamoStream: {},
 	};
 
 	for (const file of files) {
