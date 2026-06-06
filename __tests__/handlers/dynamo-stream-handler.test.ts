@@ -59,6 +59,32 @@ describe('DynamoDB Stream Handler', () => {
 		});
 	});
 
+	test('Fails the whole batch if a retried record has no sequence number', async () => {
+		jest.spyOn(console, 'error').mockImplementation(() => {});
+
+		const orphan: DynamoDBRecord = {
+			eventName: 'INSERT',
+			eventSource: 'aws:dynamodb',
+			dynamodb: { Keys: { id: { S: 'x' } } }, // no SequenceNumber
+		};
+
+		const handler = DynamoStreamHandler({ tableName: 'users' }, async () => {
+			return { retry: [orphan] };
+		});
+
+		const result = await handler(
+			{ Records: [mockRecord('1'), orphan] },
+			{} as any,
+			() => {},
+		);
+
+		// Subset-reporting could checkpoint past the orphan, so the whole batch
+		// (the records that do have sequence numbers) is failed instead.
+		expect(result).toEqual({
+			batchItemFailures: [{ itemIdentifier: '1' }],
+		});
+	});
+
 	test('Reports the whole batch when the handler throws', async () => {
 		jest.spyOn(console, 'error').mockImplementation(() => {});
 

@@ -92,9 +92,14 @@ The project uses Jest with TypeScript support:
 
 Releases are automated. `.github/workflows/publish.yml` fires on `v*` tag pushes:
 it runs the Jest tests, **verifies the tag matches `package.json` version**,
-publishes to npm with the right dist-tag via npm Trusted Publishing (OIDC — no
-`NPM_TOKEN`), then creates a GitHub Release whose body is the matching
-`CHANGELOG.md` section. Prereleases are flagged with `--prerelease`.
+extracts the matching `CHANGELOG.md` section, publishes to npm with the right
+dist-tag via npm Trusted Publishing (OIDC — no `NPM_TOKEN`), then creates a
+GitHub Release with those notes. Prereleases are flagged with `--prerelease`.
+
+Notes extraction runs **before** publishing, so a stable release with no
+`CHANGELOG.md` section aborts before anything reaches npm. A prerelease
+(`-alpha`/`-beta`/`-rc`) without a section does not fail — it gets a generic
+release body — so dry-run tags stay frictionless.
 
 ### npm dist-tags
 

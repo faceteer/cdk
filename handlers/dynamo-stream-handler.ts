@@ -146,9 +146,21 @@ export function DynamoStreamHandler(
 			if (!response || response.retry.length === 0) {
 				return { batchItemFailures: [] };
 			}
-			return {
-				batchItemFailures: toBatchItemFailures(response.retry),
-			};
+			const failures = toBatchItemFailures(response.retry);
+			if (failures.length !== response.retry.length) {
+				/**
+				 * A record returned for retry had no sequence number to report.
+				 * Reporting only a subset could checkpoint Lambda past the
+				 * unreported record (streams retry from the lowest reported
+				 * sequence number), so fail the whole batch instead —
+				 * re-processing is recoverable, skipping a record is not.
+				 */
+				console.error(
+					'A record returned for retry is missing a sequence number; failing the entire batch.',
+				);
+				return { batchItemFailures: toBatchItemFailures(event.Records) };
+			}
+			return { batchItemFailures: failures };
 		} catch (error) {
 			console.error(error);
 			/**

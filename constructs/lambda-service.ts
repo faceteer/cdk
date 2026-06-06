@@ -374,6 +374,10 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				);
 			}
 
+			// Unlike event buses, tables are resolved by map key only. An
+			// `ITable`'s name is often an unresolved token (e.g. when imported
+			// via `Table.fromTableAttributes`), so a name-based fallback like
+			// the event bus loop's would not reliably match.
 			const table = tables[streamHandler.tableName];
 			if (!table) {
 				throw new Error(`
