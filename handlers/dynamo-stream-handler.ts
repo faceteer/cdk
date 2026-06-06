@@ -78,12 +78,12 @@ export interface DynamoStreamHandlerDefinition extends HandlerDefinition {
 
 	/**
 	 * The maximum age, in seconds, of a record that Lambda sends to the
-	 * function.
+	 * function. Records older than this are discarded.
 	 *
-	 * Valid Range: 60 to 604,800 (7 days), or -1 for infinite. The DynamoDB
-	 * stream data retention limit is 24 hours regardless of this value.
+	 * Valid Range: 60 to 604,800 (7 days). The DynamoDB stream data retention
+	 * limit is 24 hours regardless of this value.
 	 *
-	 * @default -1 (infinite)
+	 * @default - records are retried until they expire from the stream
 	 */
 	maxRecordAge?: number;
 }
