@@ -92,6 +92,17 @@ describe('Parse Handlers', () => {
 				memorySize: 256,
 			}),
 		});
+
+		expect(handlers.dynamoStream).toEqual({
+			StreamUsers: expect.objectContaining({
+				name: 'StreamUsers',
+				tableName: 'users',
+				startingPosition: 'TRIM_HORIZON',
+				batchSize: 100,
+				memorySize: 1024,
+				timeout: 900,
+			}),
+		});
 	});
 });
 

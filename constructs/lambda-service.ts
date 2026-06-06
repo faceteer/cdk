@@ -8,6 +8,7 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as route53Targets from 'aws-cdk-lib/aws-route53-targets';
 import * as events from 'aws-cdk-lib/aws-events';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { constantCase } from 'change-case';
 import { Construct } from 'constructs';
 import { extractHandlers } from '../extract/extract-handlers';
@@ -16,6 +17,7 @@ import { ServiceNotificationFunction } from './service-notification-function';
 import { ServiceQueueFunction } from './service-queue-function';
 import { ServiceCronFunction } from './service-cron-function';
 import { ServiceEventFunction } from './service-event-function';
+import { ServiceDynamoStreamFunction } from './service-dynamo-stream-function';
 import { validatePathParameters } from '../util/validate-path-parameters';
 import {
 	ApiGateway,
@@ -124,6 +126,11 @@ export interface LambdaServiceProps {
 	 * Use the key to reference the appropriate event bus in your Event Handler definition.
 	 */
 	eventBuses?: { [key: string]: events.IEventBus };
+	/**
+	 * Use the key to reference the appropriate table in your DynamoDB Stream
+	 * Handler definition. The table must have a stream enabled.
+	 */
+	tables?: { [key: string]: dynamodb.ITable };
 }
 
 export class LambdaService extends Construct implements iam.IGrantable {
@@ -153,6 +160,7 @@ export class LambdaService extends Construct implements iam.IGrantable {
 			defaultScopes,
 			domain,
 			eventBuses,
+			tables,
 			api,
 			stage,
 			layers,
@@ -233,7 +241,14 @@ export class LambdaService extends Construct implements iam.IGrantable {
 		 */
 		const handlers: ReturnType<typeof extractHandlers> = handlersFolder
 			? extractHandlers(handlersFolder)
-			: { api: {}, notification: {}, queue: {}, cron: {}, event: {} };
+			: {
+					api: {},
+					notification: {},
+					queue: {},
+					cron: {},
+					event: {},
+					dynamoStream: {},
+			  };
 
 		if (domain) {
 			const { certificate, domainName, route53Zone } = domain;
@@ -350,6 +365,33 @@ export class LambdaService extends Construct implements iam.IGrantable {
 				eventBus,
 			});
 			this.functions.push(eventFn);
+		}
+
+		for (const streamHandler of Object.values(handlers.dynamoStream)) {
+			if (!tables) {
+				throw new Error(
+					'Tried to create a DynamoDB stream handler without any configured tables',
+				);
+			}
+
+			const table = tables[streamHandler.tableName];
+			if (!table) {
+				throw new Error(`
+					Could not find the table "${streamHandler.tableName}" referenced by the DynamoDB stream handler "${streamHandler.name}".
+					Please make sure the handler references a table configured in the "tables" property of the service.
+				`);
+			}
+
+			const streamFn = new ServiceDynamoStreamFunction(
+				this,
+				streamHandler.name,
+				{
+					...baseFunctionProps,
+					definition: streamHandler,
+					table,
+				},
+			);
+			this.functions.push(streamFn);
 		}
 
 		for (const notificationHandler of Object.values(handlers.notification)) {

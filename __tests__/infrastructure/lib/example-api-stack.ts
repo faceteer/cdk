@@ -1,5 +1,6 @@
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { EventBus } from 'aws-cdk-lib/aws-events';
+import { AttributeType, StreamViewType, Table } from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 import { LambdaService } from '../../../constructs';
 
@@ -17,6 +18,12 @@ export class ExampleApiStack extends Stack {
 			eventBuses: {
 				foobar: new EventBus(this, 'testEB', {
 					eventBusName: 'foobar',
+				}),
+			},
+			tables: {
+				users: new Table(this, 'UsersTable', {
+					partitionKey: { name: 'id', type: AttributeType.STRING },
+					stream: StreamViewType.NEW_AND_OLD_IMAGES,
 				}),
 			},
 		});
